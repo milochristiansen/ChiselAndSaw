@@ -1,0 +1,7 @@
+# Binaries for programs and plugins
+bin/
+obj/
+
+# Sublime stuff
+*.sublime-workspace
+*.sublime-project
