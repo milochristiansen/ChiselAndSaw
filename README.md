@@ -13,6 +13,5 @@ TODO:
 -------------------------------------------------------------------------------------------------------------------------
 
 * Fix the texture issues.
-* Allow other voxel sizes, probably by shift+right clicking to cycle modes.
 * Allow picking up and placing chiseled blocks.
 * Greedy meshing.
