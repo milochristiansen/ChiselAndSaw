@@ -1,4 +1,4 @@
-﻿
+
 using System.Collections.Generic;
 using System.IO;
 using Vintagestory.API.Client;
@@ -49,6 +49,15 @@ namespace VSExampleMods {
 				IPlayer byPlayer = null;
 				if (byEntity is IEntityPlayer) {
 					byPlayer = byEntity.World.PlayerByUid(((IEntityPlayer)byEntity).PlayerUID);
+				}
+
+				if (byPlayer.Entity.Controls.Sneak) {
+					var b = byEntity.World.BlockAccessor.GetBlockEntity(blockSel.Position) as BlockEntityChisel;
+					if (b == null) {
+						return false;
+					}
+					b.SetSelSize(0);
+					return true;
 				}
 				return OnBlockInteract(byEntity.World, byPlayer, blockSel, false);
 			}
@@ -104,6 +113,7 @@ namespace VSExampleMods {
 		bool[,,] Voxels = new bool[16, 16, 16];
 		MeshData mesh;
 		Cuboidf[] selectionBoxes = new Cuboidf[0];
+		int selectionSize = 1;
 
 		public override void Initialize(ICoreAPI api) {
 			base.Initialize(api);
@@ -112,6 +122,30 @@ namespace VSExampleMods {
 				if (api.Side == EnumAppSide.Client) RegenMesh();
 				RegenSelectionBoxes();
 			}
+		}
+
+		public void SetSelSize(int mode) {
+			switch (mode) {
+				case 0:
+					selectionSize = selectionSize * 2;
+					if (selectionSize >= 16) {
+						selectionSize = 1;
+					}
+					break;
+				case 2:
+					selectionSize = 2;
+					break;
+				case 4:
+					selectionSize = 4;
+					break;
+				case 8:
+					selectionSize = 8;
+					break;
+				default:
+					selectionSize = 1;
+					break;
+			}
+			RegenSelectionBoxes();
 		}
 
 		internal void WasPlaced(Block block) {
@@ -137,18 +171,26 @@ namespace VSExampleMods {
 				Cuboidf box = selectionBoxes[blockSel.SelectionBoxIndex];
 				Vec3i voxelPos = new Vec3i((int)(16 * box.X1), (int)(16 * box.Y1), (int)(16 * box.Z1));
 
-				UpdateVoxel(byPlayer, voxelPos, blockSel.Face, isBreak);
+				UpdateVoxels(byPlayer, voxelPos, blockSel.Face, isBreak);
 			}
 		}
 
-		internal void UpdateVoxel(IPlayer byPlayer, Vec3i voxelPos, BlockFacing facing, bool isBreak) {
+		internal void UpdateVoxels(IPlayer byPlayer, Vec3i voxelPos, BlockFacing facing, bool isBreak) {
 			Vec3i addAtPos = voxelPos.Clone().Add(facing);
 			if (!isBreak) {
+				// Ugly.
+				if (addAtPos.X > voxelPos.X) addAtPos.X += (selectionSize - 1);
+				if (addAtPos.X < voxelPos.X) addAtPos.X -= (selectionSize - 1);
+				if (addAtPos.Y > voxelPos.Y) addAtPos.Y += (selectionSize - 1);
+				if (addAtPos.Y < voxelPos.Y) addAtPos.Y -= (selectionSize - 1);
+				if (addAtPos.Z > voxelPos.Z) addAtPos.Z += (selectionSize - 1);
+				if (addAtPos.Z < voxelPos.Z) addAtPos.Z -= (selectionSize - 1);
+
 				if (addAtPos.X >= 0 && addAtPos.X < 16 && addAtPos.Y >= 0 && addAtPos.Y < 16 && addAtPos.Z >= 0 && addAtPos.Z < 16) {
-					Voxels[addAtPos.X, addAtPos.Y, addAtPos.Z] = true;
+					SetVoxels(addAtPos, true);
 				}
 			} else {
-				Voxels[voxelPos.X, voxelPos.Y, voxelPos.Z] = false;
+				SetVoxels(voxelPos, false);
 			}
 
 			if (api.Side == EnumAppSide.Client) {
@@ -162,6 +204,16 @@ namespace VSExampleMods {
 			// serverside blockselection index is inaccurate
 			if (api.Side == EnumAppSide.Client) {
 				SendUseOverPacket(byPlayer, voxelPos, facing, isBreak);
+			}
+		}
+
+		internal void SetVoxels(Vec3i voxelPos, bool state) {
+			for (int x = 0; x < selectionSize; x++) {
+				for (int y = 0; y < selectionSize; y++) {
+					for (int z = 0; z < selectionSize; z++) {
+						Voxels[voxelPos.X + x, voxelPos.Y + y, voxelPos.Z + z] = state;
+					}
+				}
 			}
 		}
 
@@ -197,7 +249,7 @@ namespace VSExampleMods {
 					facing = BlockFacing.ALLFACES[reader.ReadInt16()];
 				}
 
-				UpdateVoxel(player, voxelPos, facing, isBreak);
+				UpdateVoxels(player, voxelPos, facing, isBreak);
 			}
 		}
 
@@ -220,7 +272,6 @@ namespace VSExampleMods {
 		}
 
 		public bool OnTesselation(ITerrainMeshPool mesher, ITesselatorAPI tesselator) {
-			//ICoreClientAPI capi = api as ICoreClientAPI;
 			if (mesh == null) return false;
 
 			mesher.AddMeshData(mesh);
@@ -230,11 +281,11 @@ namespace VSExampleMods {
 		public void RegenSelectionBoxes() {
 			List<Cuboidf> boxes = new List<Cuboidf>();
 
-			for (int x = 0; x < 16; x++) {
-				for (int y = 0; y < 16; y++) {
-					for (int z = 0; z < 16; z++) {
-						if (Voxels[x, y, z]) {
-							boxes.Add(new Cuboidf(x / 16f, y / 16f, z / 16f, x / 16f + 1 / 16f, y / 16f + 1 / 16f, z / 16f + 1 / 16f));
+			for (int x = 0; x < 16; x += selectionSize) {
+				for (int y = 0; y < 16; y += selectionSize) {
+					for (int z = 0; z < 16; z += selectionSize) {
+						if (Voxels[x, y, z]) { // TODO <- Fix this. It needs to check all blocks in region.
+							boxes.Add(new Cuboidf(x / 16f, y / 16f, z / 16f, x / 16f + selectionSize / 16f, y / 16f + selectionSize / 16f, z / 16f + selectionSize / 16f));
 						}
 					}
 				}
