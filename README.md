@@ -1,23 +1,18 @@
 
-RAMS: Remote Audio Metadata Server
+Chisel & Saw
 ========================================================================================================================
 
-RAMS is a media player and management application, with a focus on supporting a single shared media library and
-decentralized player architecture.
+This mod is based on [an official example mod](https://github.com/anegostudios/vschiselmodsample). I consider this to be
+the same basic work, just given the polish it deserves.
 
-Currently RAMS has three main pieces: The metadata server, the player daemon, and the UI.
+While the repository is under the same license as the original example mod, all content that was not part of the original
+example is to be considered CC0.
 
-The version of this app stored in the repository is currently a work in progress. Everything compiles, but peripheral
-utilities are missing and there may be API incompatibilities between tools.
 
 TODO:
 -------------------------------------------------------------------------------------------------------------------------
 
-* Provide a lower-level interface for interaction with the server designed for remote backup and restore, as well as
-  adding new stuff.
-* Write a new media importer!
-* Make sure all the license stuff for the third-part JS libs are properly sorted out.
-* Have the player track what tracks are missing info, and send the DB the missing info where possible.
-* HTML UI:
-	* Allow dragging the progress thumb to seek the track.
-* More polish on the player would be nice, some parts are just ugly and poorly written.
+* Fix the texture issues.
+* Allow other voxel sizes, probably by shift+right clicking to cycle modes.
+* Allow picking up and placing chiseled blocks.
+* Greedy meshing.
