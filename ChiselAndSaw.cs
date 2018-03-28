@@ -113,7 +113,7 @@ namespace VSExampleMods {
 		bool[,,] Voxels = new bool[16, 16, 16];
 		MeshData mesh;
 		Cuboidf[] selectionBoxes = new Cuboidf[0];
-		int selectionSize = 1;
+		int selectionSize = 8;
 
 		public override void Initialize(ICoreAPI api) {
 			base.Initialize(api);
@@ -127,9 +127,10 @@ namespace VSExampleMods {
 		public void SetSelSize(int mode) {
 			switch (mode) {
 				case 0:
-					selectionSize = selectionSize * 2;
-					if (selectionSize >= 16) {
-						selectionSize = 1;
+					if (selectionSize == 1) {
+						selectionSize = 8;
+					} else {
+						selectionSize = selectionSize / 2;
 					}
 					break;
 				case 2:
@@ -189,8 +190,10 @@ namespace VSExampleMods {
 				if (addAtPos.X >= 0 && addAtPos.X < 16 && addAtPos.Y >= 0 && addAtPos.Y < 16 && addAtPos.Z >= 0 && addAtPos.Z < 16) {
 					SetVoxels(addAtPos, true);
 				}
-			} else {
+			} else if (!LastBlock(voxelPos)) {
 				SetVoxels(voxelPos, false);
+			} else {
+				return;
 			}
 
 			if (api.Side == EnumAppSide.Client) {
@@ -215,6 +218,37 @@ namespace VSExampleMods {
 					}
 				}
 			}
+		}
+
+		internal bool BlockIn(Vec3i voxelPos) {
+			for (int x = 0; x < selectionSize; x++) {
+				for (int y = 0; y < selectionSize; y++) {
+					for (int z = 0; z < selectionSize; z++) {
+						if (Voxels[voxelPos.X + x, voxelPos.Y + y, voxelPos.Z + z]) {
+							return true;
+						}
+					}
+				}
+			}
+			return false;
+		}
+
+		internal bool LastBlock(Vec3i voxelPos) {
+			for (int x = 0; x < 16; x++) {
+				for (int y = 0; y < 16; y++) {
+					for (int z = 0; z < 16; z++) {
+						if (Voxels[x, y, z]) {
+							if ((x >= voxelPos.X && x <= voxelPos.X + selectionSize) &&
+								(y >= voxelPos.Y && y <= voxelPos.Y + selectionSize) &&
+								(z >= voxelPos.Z && z <= voxelPos.Z + selectionSize)) {
+								continue;
+							}
+							return false;
+						}
+					}
+				}
+			}
+			return true;
 		}
 
 		public void SendUseOverPacket(IPlayer byPlayer, Vec3i voxelPos, BlockFacing facing, bool isBreak) {
@@ -284,7 +318,7 @@ namespace VSExampleMods {
 			for (int x = 0; x < 16; x += selectionSize) {
 				for (int y = 0; y < 16; y += selectionSize) {
 					for (int z = 0; z < 16; z += selectionSize) {
-						if (Voxels[x, y, z]) { // TODO <- Fix this. It needs to check all blocks in region.
+						if (BlockIn(new Vec3i(x, y, z))) {
 							boxes.Add(new Cuboidf(x / 16f, y / 16f, z / 16f, x / 16f + selectionSize / 16f, y / 16f + selectionSize / 16f, z / 16f + selectionSize / 16f));
 						}
 					}
