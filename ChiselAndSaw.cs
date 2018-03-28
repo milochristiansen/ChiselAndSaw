@@ -333,7 +333,7 @@ namespace VSExampleMods {
 
 			mesh = new MeshData(24, 36, false).WithTints().WithRenderpasses();
 
-			// The New! Shiny! Inefficent version.
+			// The New! Shiny! Inefficent! version.
 			// Dynamically generating the needed quads is a step along the path to greedy meshing though.
 			bool[] sideVisible = new bool[6];
 			for (int x = 0; x < 16; x++) {
@@ -411,10 +411,7 @@ namespace VSExampleMods {
 					quad = QuadMeshUtil.GetCustomQuadHorizontal(xf, yf, zf, wf, hf, 255, 255, 255, 255);
 					quad.Rotate(new Vec3f(xf + hu, yf + hu, zf + hu), GameMath.PI, 0, 0);
 					break;
-				case 5: // D
-					quad = QuadMeshUtil.GetCustomQuadHorizontal(xf, yf, zf, wf, hf, 255, 255, 255, 255);
-					break;
-				default:
+				default: // D
 					quad = QuadMeshUtil.GetCustomQuadHorizontal(xf, yf, zf, wf, hf, 255, 255, 255, 255);
 					break;
 			}
@@ -445,13 +442,55 @@ namespace VSExampleMods {
 
 			float offsetX = (coords[coordIndexByFace[face][0]] * 2f) / capi.BlockTextureAtlas.Size;
 			float offsetZ = (coords[coordIndexByFace[face][1]] * 2f) / capi.BlockTextureAtlas.Size;
-
 			for (int i = 0; i < quad.Uv.Length; i += 2) {
 				quad.Uv[i] += offsetX;
 				quad.Uv[i + 1] += offsetZ;
 			}
 
+			switch (face) {
+				case 0: // N
+					SwapUV(ref quad, 0, 2);
+					SwapUV(ref quad, 4, 6);
+					break;
+				case 1: // E
+					SwapUV(ref quad, 0, 2);
+					SwapUV(ref quad, 4, 6);
+					break;
+				case 2: // S
+					break;
+				case 3: // W
+					break;
+				case 4: // U
+					SwapUV(ref quad, 0, 6);
+					SwapUV(ref quad, 2, 4);
+					break;
+				default: // D
+					break;
+			}
+
 			return quad;
+		}
+
+		private void SwapUV(ref MeshData quad, int a, int b) {
+			var x = quad.Uv[a];
+			var y = quad.Uv[a + 1];
+			quad.Uv[a] = quad.Uv[b];
+			quad.Uv[a + 1] = quad.Uv[b + 1];
+			quad.Uv[b] = x;
+			quad.Uv[b + 1] = y;
+		}
+
+		private void RotUV(ref MeshData quad, int a, int b, int c, int d) {
+			var x = quad.Uv[a];
+			var y = quad.Uv[a + 1];
+			quad.Uv[a] = quad.Uv[b];
+			quad.Uv[a + 1] = quad.Uv[b + 1];
+			quad.Uv[b] = quad.Uv[c];
+			quad.Uv[b + 1] = quad.Uv[c + 1];
+			quad.Uv[c] = quad.Uv[d];
+			quad.Uv[c + 1] = quad.Uv[d + 1];
+			quad.Uv[d] = x;
+			quad.Uv[d + 1] = y;
 		}
 
 		byte[] serializeVoxels() {
