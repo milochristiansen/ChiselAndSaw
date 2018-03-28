@@ -333,104 +333,13 @@ namespace VSExampleMods {
 
 			mesh = new MeshData(24, 36, false).WithTints().WithRenderpasses();
 
-
-			float subPixelPadding = capi.BlockTextureAtlas.SubPixelPadding;
-
-			MeshData[] meshesByFace = new MeshData[6];
-
-			// North
-			meshesByFace[0] = QuadMeshUtil.GetCustomQuad(0, 0, 0, 1 / 16f, 1 / 16f, 255, 255, 255, 255);
-			meshesByFace[0].Rotate(new Vec3f(1 / 32f, 1 / 32f, 1 / 32f), 0, GameMath.PI, 0);
-			meshesByFace[0].Translate(0, 0, -1 / 16f);
-
-			// East
-			meshesByFace[1] = QuadMeshUtil.GetCustomQuad(0, 0, 0, 1 / 16f, 1 / 16f, 255, 255, 255, 255);
-			meshesByFace[1].Rotate(new Vec3f(1 / 32f, 1 / 32f, 1 / 32f), 0, GameMath.PIHALF, 0);
-			meshesByFace[1].Translate(1 / 16f, 0, 0);
-
-			// South
-			meshesByFace[2] = QuadMeshUtil.GetCustomQuad(0, 0, 1 / 16f, 1 / 16f, 1 / 16f, 255, 255, 255, 255);
-
-			// West
-			meshesByFace[3] = QuadMeshUtil.GetCustomQuad(0, 0, 0, 1 / 16f, 1 / 16f, 255, 255, 255, 255);
-			meshesByFace[3].Rotate(new Vec3f(1 / 32f, 1 / 32f, 1 / 32f), 0, -GameMath.PIHALF, 0);
-			meshesByFace[3].Translate(-1 / 16f, 0, 0);
-
-			// Up
-			meshesByFace[4] = QuadMeshUtil.GetCustomQuadHorizontal(0, 1 / 16f, 0, 1 / 16f, 1 / 16f, 255, 255, 255, 255);
-			meshesByFace[4].Rotate(new Vec3f(1 / 32f, 1 / 32f, 1 / 32f), GameMath.PI, 0, 0);
-			meshesByFace[4].Translate(0, 1 / 16f, 0);
-
-			// Down
-			meshesByFace[5] = QuadMeshUtil.GetCustomQuadHorizontal(0, 0, 0, 1 / 16f, 1 / 16f, 255, 255, 255, 255);
-
-			float[] sideShadings = CubeMeshUtil.DefaultBlockSideShadingsByFacing;
-
-			for (int i = 0; i < meshesByFace.Length; i++) {
-				MeshData m = meshesByFace[i];
-				m.Rgba = new byte[16];
-				m.Rgba.Fill((byte)(255 * sideShadings[i]));
-
-				m.rgba2 = new byte[16];
-				m.rgba2.Fill((byte)(255 * sideShadings[i]));
-				m.Flags = new int[4];
-				m.Flags.Fill(0);
-				m.RenderPasses = new int[1];
-				m.RenderPassCount = 1;
-				m.Tints = new int[1];
-				m.TintsCount = 1;
-				m.XyzFaces = new int[] { i };
-				m.XyzFacesCount = 1;
-
-				TextureAtlasPosition tpos = capi.BlockTextureAtlas.GetPosition(block, BlockFacing.ALLFACES[i].Code);
-				for (int j = 0; j < m.Uv.Length; j++) {
-					m.Uv[j] = (j % 2 > 0 ? tpos.y1 : tpos.x1) + m.Uv[j] * 32f / capi.BlockTextureAtlas.Size - subPixelPadding;
-				}
-			}
-
-			MeshData[] voxelMeshesOffset = new MeshData[6];
-			for (int i = 0; i < meshesByFace.Length; i++) {
-				voxelMeshesOffset[i] = meshesByFace[i].Clone();
-			}
-
-			// North: Negative Z 
-			// East: Positive X 
-			// South: Positive Z 
-			// West: Negative X
-
+			// The New! Shiny! Inefficent version.
+			// Dynamically generating the needed quads is a step along the path to greedy meshing though.
 			bool[] sideVisible = new bool[6];
-
-			int[] coords = new int[3];
-
-			int[][] coordIndexByFace = new int[][] {
-                // N
-                new int[] { 0, 1 },
-                // E
-                new int[] { 2, 1 },
-                // S
-                new int[] { 0, 1 },
-                // W
-                new int[] { 2, 1 },
-                // U
-                new int[] { 0, 2 },
-                // D
-                new int[] { 0, 2 }
-			};
-
 			for (int x = 0; x < 16; x++) {
-				coords[0] = x;
-
 				for (int y = 0; y < 16; y++) {
-					coords[1] = y;
-
 					for (int z = 0; z < 16; z++) {
 						if (!Voxels[x, y, z]) continue;
-
-						coords[2] = z;
-
-						float px = x / 16f;
-						float py = y / 16f;
-						float pz = z / 16f;
 
 						sideVisible[0] = z == 0 || !Voxels[x, y, z - 1];
 						sideVisible[1] = x == 15 || !Voxels[x + 1, y, z];
@@ -441,29 +350,108 @@ namespace VSExampleMods {
 
 						for (int f = 0; f < 6; f++) {
 							if (!sideVisible[f]) continue;
-
-							MeshData facerefmesh = meshesByFace[f];
-							MeshData faceoffsetmesh = voxelMeshesOffset[f];
-
-							for (int i = 0; i < facerefmesh.xyz.Length; i += 3) {
-								faceoffsetmesh.xyz[i] = px + facerefmesh.xyz[i];
-								faceoffsetmesh.xyz[i + 1] = py + facerefmesh.xyz[i + 1];
-								faceoffsetmesh.xyz[i + 2] = pz + facerefmesh.xyz[i + 2];
-							}
-
-							float offsetX = (coords[coordIndexByFace[f][0]] * 2f) / capi.BlockTextureAtlas.Size;
-							float offsetZ = (coords[coordIndexByFace[f][1]] * 2f) / capi.BlockTextureAtlas.Size;
-
-							for (int i = 0; i < facerefmesh.Uv.Length; i += 2) {
-								faceoffsetmesh.Uv[i] = facerefmesh.Uv[i] + offsetX;
-								faceoffsetmesh.Uv[i + 1] = facerefmesh.Uv[i + 1] + offsetZ;
-							}
-
-							mesh.AddMeshData(faceoffsetmesh);
+							mesh.AddMeshData(GenQuad(f, x, y, z, 1, 1));
 						}
 					}
 				}
 			}
+		}
+
+		private int[][] coordIndexByFace = new int[][] {
+			    // N
+			    new int[] { 0, 1 },
+			    // E
+			    new int[] { 2, 1 },
+			    // S
+			    new int[] { 0, 1 },
+			    // W
+			    new int[] { 2, 1 },
+			    // U
+			    new int[] { 0, 2 },
+			    // D
+			    new int[] { 0, 2 }
+			};
+
+		private MeshData GenQuad(int face, int x, int y, int z, int w, int h) {
+			var shading = (byte)(255 * CubeMeshUtil.DefaultBlockSideShadingsByFacing[face]);
+
+			// I'm pretty sure this isn't correct for quads larger than w=1,h=1.
+			// Larger quads probably need to be translated one way or another.
+
+			// North: Negative Z
+			// East: Positive X
+			// South: Positive Z
+			// West: Negative X
+
+			var u = 1 / 16f;
+			var hu = 1 / 32f;
+			var xf = x * u;
+			var yf = y * u;
+			var zf = z * u;
+			var wf = w * u;
+			var hf = h * u;
+			MeshData quad;
+			switch (face) {
+				case 0: // N
+					quad = QuadMeshUtil.GetCustomQuad(xf, yf, zf + u, wf, hf, 255, 255, 255, 255);
+					quad.Rotate(new Vec3f(xf + hu, yf + hu, zf + hu), 0, GameMath.PI, 0);
+					break;
+				case 1: // E
+					quad = QuadMeshUtil.GetCustomQuad(xf, yf, zf + u, wf, hf, 255, 255, 255, 255);
+					quad.Rotate(new Vec3f(xf + hu, yf + hu, zf + hu), 0, GameMath.PIHALF, 0);
+					break;
+				case 2: // S
+					quad = QuadMeshUtil.GetCustomQuad(xf, yf, zf + u, wf, hf, 255, 255, 255, 255);
+					break;
+				case 3: // W
+					quad = QuadMeshUtil.GetCustomQuad(xf, yf, zf + u, wf, hf, 255, 255, 255, 255);
+					quad.Rotate(new Vec3f(xf + hu, yf + hu, zf + hu), 0, -GameMath.PIHALF, 0);
+					break;
+				case 4: // U
+					quad = QuadMeshUtil.GetCustomQuadHorizontal(xf, yf, zf, wf, hf, 255, 255, 255, 255);
+					quad.Rotate(new Vec3f(xf + hu, yf + hu, zf + hu), GameMath.PI, 0, 0);
+					break;
+				case 5: // D
+					quad = QuadMeshUtil.GetCustomQuadHorizontal(xf, yf, zf, wf, hf, 255, 255, 255, 255);
+					break;
+				default:
+					quad = QuadMeshUtil.GetCustomQuadHorizontal(xf, yf, zf, wf, hf, 255, 255, 255, 255);
+					break;
+			}
+
+			quad.Rgba = new byte[16];
+			quad.Rgba.Fill(shading);
+			quad.rgba2 = new byte[16];
+			quad.rgba2.Fill(shading);
+			quad.Flags = new int[4];
+			quad.Flags.Fill(0);
+			quad.RenderPasses = new int[1];
+			quad.RenderPassCount = 1;
+			quad.Tints = new int[1];
+			quad.TintsCount = 1;
+			quad.XyzFaces = new int[] { face };
+			quad.XyzFacesCount = 1;
+
+			ICoreClientAPI capi = api as ICoreClientAPI;
+			float subPixelPadding = capi.BlockTextureAtlas.SubPixelPadding;
+			TextureAtlasPosition tpos = capi.BlockTextureAtlas.GetPosition(block, BlockFacing.ALLFACES[face].Code);
+			for (int j = 0; j < quad.Uv.Length; j++) {
+				quad.Uv[j] = (j % 2 > 0 ? tpos.y1 : tpos.x1) + quad.Uv[j] * 32f / capi.BlockTextureAtlas.Size - subPixelPadding;
+			}
+
+			int[] coords = new int[]{
+				x, y, z,
+			};
+
+			float offsetX = (coords[coordIndexByFace[face][0]] * 2f) / capi.BlockTextureAtlas.Size;
+			float offsetZ = (coords[coordIndexByFace[face][1]] * 2f) / capi.BlockTextureAtlas.Size;
+
+			for (int i = 0; i < quad.Uv.Length; i += 2) {
+				quad.Uv[i] += offsetX;
+				quad.Uv[i + 1] += offsetZ;
+			}
+
+			return quad;
 		}
 
 		byte[] serializeVoxels() {
