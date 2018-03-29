@@ -12,7 +12,7 @@ example is to be considered CC0.
 TODO:
 -------------------------------------------------------------------------------------------------------------------------
 
-* Show the current model while in inventory.
-* Player facing based rotation.
-* Block matrial and other properties should be based on the source block type.
+* Fix the inventory item transparency issues.
+* Block matrial and other properties should be based on the source block type (needs two chiseled block varients, wood and stone).
 * Greedy meshing.
+* Compress the voxel data.

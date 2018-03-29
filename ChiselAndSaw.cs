@@ -167,7 +167,14 @@ namespace VSExampleMods {
 				itemstack.Attributes.SetInt("meshid", mid);
 			}
 			renderinfo.ModelRef = mesh;
-			//renderinfo.TextureId = 
+		}
+
+		public override int TextureSubIdForRandomBlockPixel(IWorldAccessor world, BlockPos pos, BlockFacing facing, ref int tintIndex) {
+			BlockEntityChisel be = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityChisel;
+			if (be != null && be.SrcBlock != null) {
+				return be.SrcBlock.TextureSubIdForRandomBlockPixel(world, pos, facing, ref tintIndex);
+			}
+			return base.TextureSubIdForRandomBlockPixel(world, pos, facing, ref tintIndex);
 		}
 
 		public override Cuboidf[] GetCollisionBoxes(IBlockAccessor blockAccessor, BlockPos pos) {
@@ -224,7 +231,7 @@ namespace VSExampleMods {
 
 
 	public class BlockEntityChisel : BlockEntity, IBlockShapeSupplier {
-		Block block;
+		public Block SrcBlock;
 		BitArray voxels = new BitArray(16 * 16 * 16);
 		MeshData mesh;
 		Cuboidf[] selectionBoxes = new Cuboidf[0];
@@ -233,7 +240,7 @@ namespace VSExampleMods {
 		public override void Initialize(ICoreAPI api) {
 			base.Initialize(api);
 
-			if (block != null) {
+			if (SrcBlock != null) {
 				if (api.Side == EnumAppSide.Client) RegenMesh();
 				RegenSelectionBoxes();
 				MarkDirty(true);
@@ -267,7 +274,7 @@ namespace VSExampleMods {
 		}
 
 		internal void WasPlaced(Block block) {
-			this.block = block;
+			this.SrcBlock = block;
 
 			voxels.SetAll(true);
 
@@ -425,7 +432,7 @@ namespace VSExampleMods {
 		public override void FromTreeAtributes(ITreeAttribute tree, IWorldAccessor worldAccessForResolve) {
 			base.FromTreeAtributes(tree, worldAccessForResolve);
 
-			block = worldAccessForResolve.GetBlock((ushort)tree.GetInt("blockid"));
+			SrcBlock = worldAccessForResolve.GetBlock((ushort)tree.GetInt("blockid"));
 			deserializeVoxels(tree.GetBytes("voxels"));
 
 			// Sometimes the api is null.
@@ -438,7 +445,7 @@ namespace VSExampleMods {
 		public override void ToTreeAttributes(ITreeAttribute tree) {
 			base.ToTreeAttributes(tree);
 
-			tree.SetInt("blockid", block.BlockId);
+			tree.SetInt("blockid", SrcBlock.BlockId);
 			tree.SetBytes("voxels", serializeVoxels());
 		}
 
@@ -469,12 +476,14 @@ namespace VSExampleMods {
 			if (data == null || data.Length < 16 * 16 * 16 / 8) {
 				return null;
 			};
-			return genMesh(new BitArray(data), capi, block); ;
+			var mesh = genMesh(new BitArray(data), capi, block);
+			mesh.rgba2 = null;
+			return mesh;
 		}
 
 		public void RegenMesh() {
 			ICoreClientAPI capi = api as ICoreClientAPI;
-			mesh = genMesh(voxels, capi, block);
+			mesh = genMesh(voxels, capi, SrcBlock);
 		}
 
 		private static MeshData genMesh(BitArray voxels, ICoreClientAPI capi, Block block) {
