@@ -5,7 +5,7 @@
 	creativeinventory: { "general": [""] },
 	shape: { base: "game:block/basic/cube" },
 	replaceable: 90,
-	drops: [],
+	maxStackSize: 1,
 	sidesolid: { all: false },
 	sideopaque: { all: false },
 	sideao: { all: false }

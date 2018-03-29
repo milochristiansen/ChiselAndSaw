@@ -58,6 +58,13 @@ namespace VSExampleMods {
 					}
 					b.SetSelSize(0);
 					return true;
+				} else if (byPlayer.Entity.Controls.Sprint) {
+					var b = byEntity.World.BlockAccessor.GetBlockEntity(blockSel.Position) as BlockEntityChisel;
+					if (b == null) {
+						return false;
+					}
+					b.Rotate(true);
+					return true;
 				}
 				return OnBlockInteract(byEntity.World, byPlayer, blockSel, false);
 			}
@@ -99,9 +106,58 @@ namespace VSExampleMods {
 
 				return selectionBoxes;
 			}
-
 			return base.GetSelectionBoxes(blockAccessor, pos);
 		}
+
+		public override ItemStack OnPickBlock(IWorldAccessor world, BlockPos pos) {
+			BlockEntityChisel bec = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityChisel;
+			if (bec == null) {
+				return null;
+			}
+			var tree = new TreeAttribute();
+			bec.ToTreeAttributes(tree);
+			return new ItemStack(this.Id, EnumItemClass.Block, 1, tree, world);
+		}
+
+		public override void OnBlockBroken(IWorldAccessor world, BlockPos pos, IPlayer byPlayer, float dropQuantityMultiplier = 1) {
+			if (world.Side == EnumAppSide.Server && (byPlayer == null || byPlayer.WorldData.CurrentGameMode != EnumGameMode.Creative)) {
+				ItemStack[] drops = new ItemStack[] { OnPickBlock(world, pos) };
+
+				if (drops != null) {
+					for (int i = 0; i < drops.Length; i++) {
+						world.SpawnItemEntity(drops[i], new Vec3d(pos.X + 0.5, pos.Y + 0.5, pos.Z + 0.5), null);
+					}
+				}
+
+				if (Sounds != null && Sounds.Break != null) {
+					world.PlaySoundAt(Sounds.Break, pos.X, pos.Y, pos.Z, byPlayer);
+				}
+			}
+
+			world.BlockAccessor.SetBlock(0, pos);
+		}
+
+		public override void DoPlaceBlock(IWorldAccessor world, BlockPos pos, BlockFacing onBlockFace, ItemStack byItemStack) {
+			base.DoPlaceBlock(world, pos, onBlockFace, byItemStack);
+
+			BlockEntityChisel be = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityChisel;
+			if (be != null) {
+				byItemStack.Attributes.SetInt("posx", pos.X);
+				byItemStack.Attributes.SetInt("posy", pos.Y);
+				byItemStack.Attributes.SetInt("posz", pos.Z);
+
+				be.FromTreeAtributes(byItemStack.Attributes, world);
+			}
+		}
+
+		// private MeshRef meshRef;
+		// public override void OnBeforeRender(ICoreClientAPI capi, ItemStack itemstack, EnumItemRenderTarget target, ref ItemRenderInfo renderinfo) {
+		// 	if (meshRef == null) {
+		// 		// TODO: Generate mesh.
+		// 		//meshRef = capi.Render.UploadMesh(  );
+		// 	}
+		// 	renderinfo.ModelRef = meshRef;
+		// }
 
 		public override Cuboidf[] GetCollisionBoxes(IBlockAccessor blockAccessor, BlockPos pos) {
 			return GetSelectionBoxes(blockAccessor, pos);
@@ -251,6 +307,27 @@ namespace VSExampleMods {
 			return true;
 		}
 
+		public void Rotate(bool right) {
+			var nvoxels = new bool[16, 16, 16];
+			for (int y = 0; y < 16; y++) {
+				for (int x = 0; x < 16; x++) {
+					for (int z = 0; z < 16; z++) {
+						if (right) {
+							nvoxels[x, y, z] = Voxels[16 - z - 1, y, x];
+						} else {
+							nvoxels[x, y, z] = Voxels[z, y, 16 - x - 1];
+						}
+					}
+				}
+			}
+			Voxels = nvoxels;
+			if (api.Side == EnumAppSide.Client) {
+				RegenMesh();
+			}
+			RegenSelectionBoxes();
+			MarkDirty(true);
+		}
+
 		public void SendUseOverPacket(IPlayer byPlayer, Vec3i voxelPos, BlockFacing facing, bool isBreak) {
 			byte[] data;
 
@@ -296,6 +373,11 @@ namespace VSExampleMods {
 
 			block = worldAccessForResolve.GetBlock((ushort)tree.GetInt("blockid"));
 			deserializeVoxels(tree.GetBytes("voxels"));
+
+			if (api.Side == EnumAppSide.Client && mesh == null) {
+				RegenMesh();
+			}
+			RegenSelectionBoxes();
 		}
 
 		public override void ToTreeAttributes(ITreeAttribute tree) {
@@ -358,19 +440,21 @@ namespace VSExampleMods {
 		}
 
 		private int[][] coordIndexByFace = new int[][] {
-			    // N
-			    new int[] { 0, 1 },
-			    // E
-			    new int[] { 2, 1 },
-			    // S
-			    new int[] { 0, 1 },
-			    // W
-			    new int[] { 2, 1 },
-			    // U
-			    new int[] { 0, 2 },
-			    // D
-			    new int[] { 0, 2 }
-			};
+			// N
+			new int[] { 0, 1 },
+			// E
+			new int[] { 2, 1 },
+			// S
+			new int[] { 0, 1 },
+			// W
+			new int[] { 2, 1 },
+			// U
+			new int[] { 0, 2 },
+			// D
+			new int[] { 0, 2 }
+		};
+
+		private int[] flippedCords = new int[] { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
 
 		private MeshData GenQuad(int face, int x, int y, int z, int w, int h) {
 			var shading = (byte)(255 * CubeMeshUtil.DefaultBlockSideShadingsByFacing[face]);
@@ -440,8 +524,35 @@ namespace VSExampleMods {
 				x, y, z,
 			};
 
-			float offsetX = (coords[coordIndexByFace[face][0]] * 2f) / capi.BlockTextureAtlas.Size;
-			float offsetZ = (coords[coordIndexByFace[face][1]] * 2f) / capi.BlockTextureAtlas.Size;
+			// Flip the UVs as needed. Screws up rotation even more than it already is, but we need to fix that anyway.
+			int ox = coords[coordIndexByFace[face][0]];
+			int oy = coords[coordIndexByFace[face][1]];
+			switch (face) {
+				case 0: // N
+					ox = flippedCords[ox];
+					oy = flippedCords[oy];
+					break;
+				case 1: // E
+					ox = flippedCords[ox];
+					oy = flippedCords[oy];
+					break;
+				case 2: // S
+					oy = flippedCords[oy];
+					break;
+				case 3: // W
+					oy = flippedCords[oy];
+					break;
+				case 4: // U
+					ox = flippedCords[ox];
+					oy = flippedCords[oy];
+					break;
+				default: // D
+					ox = flippedCords[ox];
+					break;
+			}
+
+			float offsetX = (ox * 2f) / capi.BlockTextureAtlas.Size;
+			float offsetZ = (oy * 2f) / capi.BlockTextureAtlas.Size;
 			for (int i = 0; i < quad.Uv.Length; i += 2) {
 				quad.Uv[i] += offsetX;
 				quad.Uv[i + 1] += offsetZ;
@@ -449,22 +560,28 @@ namespace VSExampleMods {
 
 			switch (face) {
 				case 0: // N
-					SwapUV(ref quad, 0, 2);
-					SwapUV(ref quad, 4, 6);
-					break;
-				case 1: // E
-					SwapUV(ref quad, 0, 2);
-					SwapUV(ref quad, 4, 6);
-					break;
-				case 2: // S
-					break;
-				case 3: // W
-					break;
-				case 4: // U
 					SwapUV(ref quad, 0, 6);
 					SwapUV(ref quad, 2, 4);
 					break;
+				case 1: // E
+					SwapUV(ref quad, 0, 6);
+					SwapUV(ref quad, 2, 4);
+					break;
+				case 2: // S
+					SwapUV(ref quad, 0, 6);
+					SwapUV(ref quad, 2, 4);
+					break;
+				case 3: // W
+					SwapUV(ref quad, 0, 6);
+					SwapUV(ref quad, 2, 4);
+					break;
+				case 4: // U
+					SwapUV(ref quad, 0, 2);
+					SwapUV(ref quad, 4, 6);
+					break;
 				default: // D
+					SwapUV(ref quad, 0, 2);
+					SwapUV(ref quad, 4, 6);
 					break;
 			}
 
@@ -478,19 +595,6 @@ namespace VSExampleMods {
 			quad.Uv[a + 1] = quad.Uv[b + 1];
 			quad.Uv[b] = x;
 			quad.Uv[b + 1] = y;
-		}
-
-		private void RotUV(ref MeshData quad, int a, int b, int c, int d) {
-			var x = quad.Uv[a];
-			var y = quad.Uv[a + 1];
-			quad.Uv[a] = quad.Uv[b];
-			quad.Uv[a + 1] = quad.Uv[b + 1];
-			quad.Uv[b] = quad.Uv[c];
-			quad.Uv[b + 1] = quad.Uv[c + 1];
-			quad.Uv[c] = quad.Uv[d];
-			quad.Uv[c + 1] = quad.Uv[d + 1];
-			quad.Uv[d] = x;
-			quad.Uv[d + 1] = y;
 		}
 
 		byte[] serializeVoxels() {

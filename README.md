@@ -12,6 +12,8 @@ example is to be considered CC0.
 TODO:
 -------------------------------------------------------------------------------------------------------------------------
 
-* Fix the texture issues.
-* Allow picking up and placing chiseled blocks.
+* Show the current model while in inventory.
+* Change to using a bitmap instead of a bool array for voxel data.
+* Player faceing based rotation.
+* Block matrial and other properties should be based on the source block type.
 * Greedy meshing.
