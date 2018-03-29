@@ -157,19 +157,71 @@ namespace VSExampleMods {
 			}
 		}
 
-		// private MeshRef meshRef;
-		// public override void OnBeforeRender(ICoreClientAPI capi, ItemStack itemstack, EnumItemRenderTarget target, ref ItemRenderInfo renderinfo) {
-		// 	if (meshRef == null) {
-		// 		// TODO: Generate mesh.
-		// 		//meshRef = capi.Render.UploadMesh(  );
-		// 	}
-		// 	renderinfo.ModelRef = meshRef;
-		// }
+		public override void OnBeforeRender(ICoreClientAPI capi, ItemStack itemstack, EnumItemRenderTarget target, ref ItemRenderInfo renderinfo) {
+			var mesh = ModelCache.Get(itemstack.Attributes.GetInt("meshid"), capi.Render, capi.World);
+			if (mesh == null) {
+				var block = capi.World.GetBlock((ushort)itemstack.Attributes.GetInt("blockid"));
+				var mdata = BlockEntityChisel.GenInventoryMesh(itemstack.Attributes.GetBytes("voxels"), capi, block);
+				mesh = capi.Render.UploadMesh(mdata);
+				int mid = ModelCache.New(mesh, capi.Render, capi.World);
+				itemstack.Attributes.SetInt("meshid", mid);
+			}
+			renderinfo.ModelRef = mesh;
+			//renderinfo.TextureId = 
+		}
 
 		public override Cuboidf[] GetCollisionBoxes(IBlockAccessor blockAccessor, BlockPos pos) {
 			return GetSelectionBoxes(blockAccessor, pos);
 		}
 	}
+
+	public class ModelCache {
+		private static Dictionary<int, CacheModel> data = new Dictionary<int, CacheModel>();
+		private static int lastID = 0;
+		private static long lastCollect;
+
+		private static void collect(IRenderAPI render, IClientWorldAccessor world) {
+			if (lastCollect > world.ElapsedMilliseconds - 1000) {
+				return;
+			}
+
+			var toKill = new List<int>();
+			foreach (var item in data) {
+				if (item.Value.Lived < world.ElapsedMilliseconds - 10000) {
+					render.DeleteMesh(item.Value.Mesh);
+					toKill.Add(item.Key);
+				}
+			}
+			foreach (var key in toKill) {
+				data.Remove(key);
+			}
+		}
+
+		public static int New(MeshRef mesh, IRenderAPI render, IClientWorldAccessor world) {
+			lastID++;
+			data[lastID] = new CacheModel { Mesh = mesh, Lived = world.ElapsedMilliseconds };
+			collect(render, world);
+			return lastID;
+		}
+
+		public static MeshRef Get(int id, IRenderAPI render, IClientWorldAccessor world) {
+			collect(render, world);
+
+			CacheModel model;
+			var ok = data.TryGetValue(id, out model);
+			if (ok) {
+				model.Lived = world.ElapsedMilliseconds;
+				return model.Mesh;
+			}
+			return null;
+		}
+	}
+
+	public struct CacheModel {
+		public MeshRef Mesh;
+		public long Lived;
+	}
+
 
 	public class BlockEntityChisel : BlockEntity, IBlockShapeSupplier {
 		Block block;
@@ -413,10 +465,20 @@ namespace VSExampleMods {
 			selectionBoxes = boxes.ToArray();
 		}
 
+		public static MeshData GenInventoryMesh(byte[] data, ICoreClientAPI capi, Block block) {
+			if (data == null || data.Length < 16 * 16 * 16 / 8) {
+				return null;
+			};
+			return genMesh(new BitArray(data), capi, block); ;
+		}
+
 		public void RegenMesh() {
 			ICoreClientAPI capi = api as ICoreClientAPI;
+			mesh = genMesh(voxels, capi, block);
+		}
 
-			mesh = new MeshData(24, 36, false).WithTints().WithRenderpasses();
+		private static MeshData genMesh(BitArray voxels, ICoreClientAPI capi, Block block) {
+			var mesh = new MeshData(24, 36, false).WithTints().WithRenderpasses();
 
 			// The New! Shiny! Inefficent! version.
 			// Dynamically generating the needed quads is a step along the path to greedy meshing though.
@@ -435,14 +497,15 @@ namespace VSExampleMods {
 
 						for (int f = 0; f < 6; f++) {
 							if (!sideVisible[f]) continue;
-							mesh.AddMeshData(GenQuad(f, x, y, z, 1, 1));
+							mesh.AddMeshData(GenQuad(f, x, y, z, 1, 1, capi, block));
 						}
 					}
 				}
 			}
+			return mesh;
 		}
 
-		private int[][] coordIndexByFace = new int[][] {
+		private static int[][] coordIndexByFace = new int[][] {
 			// N
 			new int[] { 0, 1 },
 			// E
@@ -457,9 +520,9 @@ namespace VSExampleMods {
 			new int[] { 0, 2 }
 		};
 
-		private int[] flippedCords = new int[] { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+		private static int[] flippedCords = new int[] { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
 
-		private MeshData GenQuad(int face, int x, int y, int z, int w, int h) {
+		private static MeshData GenQuad(int face, int x, int y, int z, int w, int h, ICoreClientAPI capi, Block block) {
 			var shading = (byte)(255 * CubeMeshUtil.DefaultBlockSideShadingsByFacing[face]);
 
 			// I'm pretty sure this isn't correct for quads larger than w=1,h=1.
@@ -516,7 +579,7 @@ namespace VSExampleMods {
 			quad.XyzFaces = new int[] { face };
 			quad.XyzFacesCount = 1;
 
-			ICoreClientAPI capi = api as ICoreClientAPI;
+
 			float subPixelPadding = capi.BlockTextureAtlas.SubPixelPadding;
 			TextureAtlasPosition tpos = capi.BlockTextureAtlas.GetPosition(block, BlockFacing.ALLFACES[face].Code);
 			for (int j = 0; j < quad.Uv.Length; j++) {
@@ -591,7 +654,7 @@ namespace VSExampleMods {
 			return quad;
 		}
 
-		private void SwapUV(ref MeshData quad, int a, int b) {
+		private static void SwapUV(ref MeshData quad, int a, int b) {
 			var x = quad.Uv[a];
 			var y = quad.Uv[a + 1];
 			quad.Uv[a] = quad.Uv[b];
@@ -600,7 +663,7 @@ namespace VSExampleMods {
 			quad.Uv[b + 1] = y;
 		}
 
-		private int at(int x, int y, int z) {
+		private static int at(int x, int y, int z) {
 			return x + 16 * (y + 16 * z);
 		}
 
