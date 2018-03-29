@@ -4,6 +4,8 @@
 	variantgroups: [
 		{ code: "material", states: ["copper", "tinbronze", "bismuthbronze", "blackbronze", "gold", "silver", "iron" ] },
 	],
+	tool: "saw",
+	damagedby: ["blockbreaking", "attacking"],
 	shape: { base: "item/chisel" },
 	durabilitybytype: {
 		"chisel-gold": 125,
@@ -16,6 +18,10 @@
 		"chisel-steel": 1200,
 	},
 	heldTpHitAnimation: "breaktool",
+	textures: {
+		"metal": { base: "game:item/tool/material/{material}" },
+		"wood": { base: "game:item/tool/material/wood" }
+	},
 	creativeinventory: { "general": ["*"], "items": ["*"] },
 	fpHandTransform: {
 		rotation: { x: 67, y: 90, z: -30 },

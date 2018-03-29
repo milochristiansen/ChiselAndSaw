@@ -1,7 +1,7 @@
 {
 	ingredientPattern: "I,S",
 	ingredients: {
-		"I": { type: "item", code: "game:ingot-*", name: "material" allowedVariants: ["copper", "tinbronze", "bismuthbronze", "blackbronze", "silver", "gold", "iron"] },
+		"I": { type: "item", code: "game:ingot-*", name: "material", allowedVariants: ["copper", "tinbronze", "bismuthbronze", "blackbronze", "silver", "gold", "iron"] },
 		"S": { type: "item", code: "game:stick" }
 	},
 	width: 1,

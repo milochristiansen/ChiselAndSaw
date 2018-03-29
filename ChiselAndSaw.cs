@@ -1,6 +1,7 @@
 
-using System.Collections.Generic;
 using System.IO;
+using System.Collections;
+using System.Collections.Generic;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
@@ -30,6 +31,9 @@ namespace VSExampleMods {
 				IPlayer byPlayer = null;
 				if (byEntity is IEntityPlayer) {
 					byPlayer = byEntity.World.PlayerByUid(((IEntityPlayer)byEntity).PlayerUID);
+				}
+				if (byPlayer.WorldData.CurrentGameMode != EnumGameMode.Creative) {
+					DamageItem(byEntity.World, byEntity, slot);
 				}
 				return OnBlockInteract(byEntity.World, byPlayer, blockSel, true);
 			}
@@ -66,6 +70,9 @@ namespace VSExampleMods {
 					b.Rotate(true);
 					return true;
 				}
+				if (byPlayer.WorldData.CurrentGameMode != EnumGameMode.Creative) {
+					DamageItem(byEntity.World, byEntity, slot);
+				}
 				return OnBlockInteract(byEntity.World, byPlayer, blockSel, false);
 			}
 
@@ -87,7 +94,6 @@ namespace VSExampleMods {
 		public bool OnBlockInteract(IWorldAccessor world, IPlayer byPlayer, BlockSelection blockSel, bool isBreak) {
 			BlockEntityChisel bec = world.BlockAccessor.GetBlockEntity(blockSel.Position) as BlockEntityChisel;
 			if (bec != null) {
-				Durability--;
 				bec.OnBlockInteract(byPlayer, blockSel, isBreak);
 				return true;
 			}
@@ -167,7 +173,7 @@ namespace VSExampleMods {
 
 	public class BlockEntityChisel : BlockEntity, IBlockShapeSupplier {
 		Block block;
-		bool[,,] Voxels = new bool[16, 16, 16];
+		BitArray voxels = new BitArray(16 * 16 * 16);
 		MeshData mesh;
 		Cuboidf[] selectionBoxes = new Cuboidf[0];
 		int selectionSize = 8;
@@ -209,13 +215,7 @@ namespace VSExampleMods {
 		internal void WasPlaced(Block block) {
 			this.block = block;
 
-			for (int x = 0; x < 16; x++) {
-				for (int y = 0; y < 16; y++) {
-					for (int z = 0; z < 16; z++) {
-						Voxels[x, y, z] = true;
-					}
-				}
-			}
+			voxels.SetAll(true);
 
 			if (api.Side == EnumAppSide.Client && mesh == null) {
 				RegenMesh();
@@ -271,7 +271,7 @@ namespace VSExampleMods {
 			for (int x = 0; x < selectionSize; x++) {
 				for (int y = 0; y < selectionSize; y++) {
 					for (int z = 0; z < selectionSize; z++) {
-						Voxels[voxelPos.X + x, voxelPos.Y + y, voxelPos.Z + z] = state;
+						voxels[at(voxelPos.X + x, voxelPos.Y + y, voxelPos.Z + z)] = state;
 					}
 				}
 			}
@@ -281,7 +281,7 @@ namespace VSExampleMods {
 			for (int x = 0; x < selectionSize; x++) {
 				for (int y = 0; y < selectionSize; y++) {
 					for (int z = 0; z < selectionSize; z++) {
-						if (Voxels[voxelPos.X + x, voxelPos.Y + y, voxelPos.Z + z]) {
+						if (voxels[at(voxelPos.X + x, voxelPos.Y + y, voxelPos.Z + z)]) {
 							return true;
 						}
 					}
@@ -294,7 +294,7 @@ namespace VSExampleMods {
 			for (int x = 0; x < 16; x++) {
 				for (int y = 0; y < 16; y++) {
 					for (int z = 0; z < 16; z++) {
-						if (Voxels[x, y, z]) {
+						if (voxels[at(x, y, z)]) {
 							if ((x >= voxelPos.X && x <= voxelPos.X + selectionSize) &&
 								(y >= voxelPos.Y && y <= voxelPos.Y + selectionSize) &&
 								(z >= voxelPos.Z && z <= voxelPos.Z + selectionSize)) {
@@ -309,19 +309,19 @@ namespace VSExampleMods {
 		}
 
 		public void Rotate(bool right) {
-			var nvoxels = new bool[16, 16, 16];
+			var nvoxels = new BitArray(16 * 16 * 16);
 			for (int y = 0; y < 16; y++) {
 				for (int x = 0; x < 16; x++) {
 					for (int z = 0; z < 16; z++) {
 						if (right) {
-							nvoxels[x, y, z] = Voxels[16 - z - 1, y, x];
+							nvoxels[at(x, y, z)] = voxels[at(16 - z - 1, y, x)];
 						} else {
-							nvoxels[x, y, z] = Voxels[z, y, 16 - x - 1];
+							nvoxels[at(x, y, z)] = voxels[at(z, y, 16 - x - 1)];
 						}
 					}
 				}
 			}
-			Voxels = nvoxels;
+			voxels = nvoxels;
 			if (api.Side == EnumAppSide.Client) {
 				RegenMesh();
 			}
@@ -375,7 +375,8 @@ namespace VSExampleMods {
 			block = worldAccessForResolve.GetBlock((ushort)tree.GetInt("blockid"));
 			deserializeVoxels(tree.GetBytes("voxels"));
 
-			if (api.Side == EnumAppSide.Client && mesh == null) {
+			// Sometimes the api is null? Weird.
+			if (api != null && api.Side == EnumAppSide.Client && mesh == null) {
 				RegenMesh();
 			}
 			RegenSelectionBoxes();
@@ -422,14 +423,14 @@ namespace VSExampleMods {
 			for (int x = 0; x < 16; x++) {
 				for (int y = 0; y < 16; y++) {
 					for (int z = 0; z < 16; z++) {
-						if (!Voxels[x, y, z]) continue;
+						if (!voxels[at(x, y, z)]) continue;
 
-						sideVisible[0] = z == 0 || !Voxels[x, y, z - 1];
-						sideVisible[1] = x == 15 || !Voxels[x + 1, y, z];
-						sideVisible[2] = z == 15 || !Voxels[x, y, z + 1];
-						sideVisible[3] = x == 0 || !Voxels[x - 1, y, z];
-						sideVisible[4] = y == 15 || !Voxels[x, y + 1, z];
-						sideVisible[5] = y == 0 || !Voxels[x, y - 1, z];
+						sideVisible[0] = z == 0 || !voxels[at(x, y, z - 1)];
+						sideVisible[1] = x == 15 || !voxels[at(x + 1, y, z)];
+						sideVisible[2] = z == 15 || !voxels[at(x, y, z + 1)];
+						sideVisible[3] = x == 0 || !voxels[at(x - 1, y, z)];
+						sideVisible[4] = y == 15 || !voxels[at(x, y + 1, z)];
+						sideVisible[5] = y == 0 || !voxels[at(x, y - 1, z)];
 
 						for (int f = 0; f < 6; f++) {
 							if (!sideVisible[f]) continue;
@@ -598,39 +599,23 @@ namespace VSExampleMods {
 			quad.Uv[b + 1] = y;
 		}
 
+		private int at(int x, int y, int z) {
+			return x + 16 * (y + 16 * z);
+		}
+
 		byte[] serializeVoxels() {
 			byte[] data = new byte[16 * 16 * 16 / 8];
-			int pos = 0;
-
-			for (int x = 0; x < 16; x++) {
-				for (int y = 0; y < 16; y++) {
-					for (int z = 0; z < 16; z++) {
-						int bitpos = pos % 8;
-						data[pos / 8] |= (byte)((Voxels[x, y, z] ? 1 : 0) << bitpos);
-						pos++;
-					}
-				}
-			}
-
+			voxels.CopyTo(data, 0);
 			return data;
 		}
 
 		void deserializeVoxels(byte[] data) {
-			Voxels = new bool[16, 16, 16];
-
-			if (data == null || data.Length < 16 * 16 * 16 / 8) return;
-
-			int pos = 0;
-
-			for (int x = 0; x < 16; x++) {
-				for (int y = 0; y < 16; y++) {
-					for (int z = 0; z < 16; z++) {
-						int bitpos = pos % 8;
-						Voxels[x, y, z] = (data[pos / 8] & (1 << bitpos)) > 0;
-						pos++;
-					}
-				}
-			}
+			if (data == null || data.Length < 16 * 16 * 16 / 8) {
+				voxels = new BitArray(16 * 16 * 16);
+				voxels.SetAll(true);
+				return;
+			};
+			voxels = new BitArray(data);
 		}
 	}
 }
