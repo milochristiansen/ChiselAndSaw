@@ -6,5 +6,5 @@
 	},
 	width: 1,
 	height: 2,
-	output: { type: "item", code: "chisel", quantity: 1  }
+	output: { type: "item", code: "chisel-{material}", quantity: 1  }
 }

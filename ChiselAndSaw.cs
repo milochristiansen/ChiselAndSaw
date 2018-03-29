@@ -1,13 +1,11 @@
 
 using System.IO;
-using System.Collections;
 using System.Collections.Generic;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
-using Vintagestory.API.Util;
 
 namespace ChiselAndSaw {
 	public class ChiselAndSaw : ModBase {
@@ -94,6 +92,11 @@ namespace ChiselAndSaw {
 		public bool OnBlockInteract(IWorldAccessor world, IPlayer byPlayer, BlockSelection blockSel, bool isBreak) {
 			BlockEntityChisel bec = world.BlockAccessor.GetBlockEntity(blockSel.Position) as BlockEntityChisel;
 			if (bec != null) {
+				if (!isBreak && bec.Model.IsFullBlock()) {
+					world.BlockAccessor.SetBlock((ushort)bec.Model.SrcBlock.Id, blockSel.Position);
+					return true;
+				}
+
 				bec.OnBlockInteract(byPlayer, blockSel, isBreak);
 				return true;
 			}
@@ -160,8 +163,9 @@ namespace ChiselAndSaw {
 		public override void OnBeforeRender(ICoreClientAPI capi, ItemStack itemstack, EnumItemRenderTarget target, ref ItemRenderInfo renderinfo) {
 			var mesh = ModelCache.Get(itemstack.Attributes.GetInt("meshid"), capi.Render, capi.World);
 			if (mesh == null) {
-				var block = capi.World.GetBlock((ushort)itemstack.Attributes.GetInt("blockid"));
-				var mdata = VoxelMesher.GenInventoryMesh(itemstack.Attributes.GetBytes("voxels"), capi, block);
+				var tdata = VoxelModel.GetTreeData(itemstack.Attributes);
+				var block = capi.World.GetBlock(tdata.Item2);
+				var mdata = VoxelMesher.GenInventoryMesh(tdata.Item1, capi, block);
 				mesh = capi.Render.UploadMesh(mdata);
 				int mid = ModelCache.New(mesh, capi.Render, capi.World);
 				itemstack.Attributes.SetInt("meshid", mid);
@@ -171,8 +175,8 @@ namespace ChiselAndSaw {
 
 		public override int TextureSubIdForRandomBlockPixel(IWorldAccessor world, BlockPos pos, BlockFacing facing, ref int tintIndex) {
 			BlockEntityChisel be = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityChisel;
-			if (be != null && be.SrcBlock != null) {
-				return be.SrcBlock.TextureSubIdForRandomBlockPixel(world, pos, facing, ref tintIndex);
+			if (be != null && be.Model != null && be.Model.SrcBlock != null) {
+				return be.Model.SrcBlock.TextureSubIdForRandomBlockPixel(world, pos, facing, ref tintIndex);
 			}
 			return base.TextureSubIdForRandomBlockPixel(world, pos, facing, ref tintIndex);
 		}
@@ -183,17 +187,14 @@ namespace ChiselAndSaw {
 	}
 
 	public class BlockEntityChisel : BlockEntity, IBlockShapeSupplier {
-		public Block SrcBlock;
-		BitArray voxels = new BitArray(16 * 16 * 16);
-		MeshData mesh;
+		public VoxelModel Model = null;
 		Cuboidf[] selectionBoxes = new Cuboidf[0];
 		int selectionSize = 8;
 
 		public override void Initialize(ICoreAPI api) {
 			base.Initialize(api);
 
-			if (SrcBlock != null) {
-				if (api.Side == EnumAppSide.Client) RegenMesh();
+			if (Model != null) {
 				RegenSelectionBoxes();
 				MarkDirty(true);
 			}
@@ -226,13 +227,10 @@ namespace ChiselAndSaw {
 		}
 
 		internal void WasPlaced(Block block) {
-			this.SrcBlock = block;
-
-			voxels.SetAll(true);
-
-			if (api.Side == EnumAppSide.Client && mesh == null) {
-				RegenMesh();
+			if (Model == null) {
+				Model = new VoxelModel(block);
 			}
+			Model.SrcBlock = block;
 			RegenSelectionBoxes();
 			MarkDirty(true);
 		}
@@ -248,27 +246,23 @@ namespace ChiselAndSaw {
 
 		internal void UpdateVoxels(IPlayer byPlayer, Vec3i voxelPos, BlockFacing facing, bool isBreak) {
 			Vec3i addAtPos = voxelPos.Clone().Add(facing);
+
+			var run = selectionSize - 1;
 			if (!isBreak) {
 				// Ugly.
-				if (addAtPos.X > voxelPos.X) addAtPos.X += (selectionSize - 1);
-				if (addAtPos.X < voxelPos.X) addAtPos.X -= (selectionSize - 1);
-				if (addAtPos.Y > voxelPos.Y) addAtPos.Y += (selectionSize - 1);
-				if (addAtPos.Y < voxelPos.Y) addAtPos.Y -= (selectionSize - 1);
-				if (addAtPos.Z > voxelPos.Z) addAtPos.Z += (selectionSize - 1);
-				if (addAtPos.Z < voxelPos.Z) addAtPos.Z -= (selectionSize - 1);
-
-				if (addAtPos.X >= 0 && addAtPos.X < 16 && addAtPos.Y >= 0 && addAtPos.Y < 16 && addAtPos.Z >= 0 && addAtPos.Z < 16) {
-					SetVoxels(addAtPos, true);
-				}
-			} else if (!LastBlock(voxelPos)) {
-				SetVoxels(voxelPos, false);
+				if (addAtPos.X > voxelPos.X) addAtPos.X += run;
+				if (addAtPos.X < voxelPos.X) addAtPos.X -= run;
+				if (addAtPos.Y > voxelPos.Y) addAtPos.Y += run;
+				if (addAtPos.Y < voxelPos.Y) addAtPos.Y -= run;
+				if (addAtPos.Z > voxelPos.Z) addAtPos.Z += run;
+				if (addAtPos.Z < voxelPos.Z) addAtPos.Z -= run;
+				Model.SetVoxels(addAtPos, addAtPos.Clone().Add(run, run, run), true);
+			} else if (!Model.LastVoxel(voxelPos, voxelPos.Clone().Add(run, run, run))) {
+				Model.SetVoxels(voxelPos, voxelPos.Clone().Add(run, run, run), false);
 			} else {
 				return;
 			}
 
-			if (api.Side == EnumAppSide.Client) {
-				RegenMesh();
-			}
 			RegenSelectionBoxes();
 			MarkDirty(true);
 
@@ -279,64 +273,8 @@ namespace ChiselAndSaw {
 			}
 		}
 
-		internal void SetVoxels(Vec3i voxelPos, bool state) {
-			for (int x = 0; x < selectionSize; x++) {
-				for (int y = 0; y < selectionSize; y++) {
-					for (int z = 0; z < selectionSize; z++) {
-						voxels[at(voxelPos.X + x, voxelPos.Y + y, voxelPos.Z + z)] = state;
-					}
-				}
-			}
-		}
-
-		internal bool BlockIn(Vec3i voxelPos) {
-			for (int x = 0; x < selectionSize; x++) {
-				for (int y = 0; y < selectionSize; y++) {
-					for (int z = 0; z < selectionSize; z++) {
-						if (voxels[at(voxelPos.X + x, voxelPos.Y + y, voxelPos.Z + z)]) {
-							return true;
-						}
-					}
-				}
-			}
-			return false;
-		}
-
-		internal bool LastBlock(Vec3i voxelPos) {
-			for (int x = 0; x < 16; x++) {
-				for (int y = 0; y < 16; y++) {
-					for (int z = 0; z < 16; z++) {
-						if (voxels[at(x, y, z)]) {
-							if ((x >= voxelPos.X && x <= voxelPos.X + selectionSize) &&
-								(y >= voxelPos.Y && y <= voxelPos.Y + selectionSize) &&
-								(z >= voxelPos.Z && z <= voxelPos.Z + selectionSize)) {
-								continue;
-							}
-							return false;
-						}
-					}
-				}
-			}
-			return true;
-		}
-
 		public void Rotate(bool right) {
-			var nvoxels = new BitArray(16 * 16 * 16);
-			for (int y = 0; y < 16; y++) {
-				for (int x = 0; x < 16; x++) {
-					for (int z = 0; z < 16; z++) {
-						if (right) {
-							nvoxels[at(x, y, z)] = voxels[at(16 - z - 1, y, x)];
-						} else {
-							nvoxels[at(x, y, z)] = voxels[at(z, y, 16 - x - 1)];
-						}
-					}
-				}
-			}
-			voxels = nvoxels;
-			if (api.Side == EnumAppSide.Client) {
-				RegenMesh();
-			}
+			Model.Rotate(right);
 			RegenSelectionBoxes();
 			MarkDirty(true);
 		}
@@ -383,28 +321,20 @@ namespace ChiselAndSaw {
 
 		public override void FromTreeAtributes(ITreeAttribute tree, IWorldAccessor worldAccessForResolve) {
 			base.FromTreeAtributes(tree, worldAccessForResolve);
-
-			SrcBlock = worldAccessForResolve.GetBlock((ushort)tree.GetInt("blockid"));
-			deserializeVoxels(tree.GetBytes("voxels"));
-
-			// Sometimes the api is null.
-			if (api != null && api.Side == EnumAppSide.Client && mesh == null) {
-				RegenMesh();
-			}
+			Model = new VoxelModel(tree, worldAccessForResolve);
 			RegenSelectionBoxes();
 		}
 
 		public override void ToTreeAttributes(ITreeAttribute tree) {
 			base.ToTreeAttributes(tree);
-
-			tree.SetInt("blockid", SrcBlock.BlockId);
-			tree.SetBytes("voxels", serializeVoxels());
+			Model.Serialize(tree);
 		}
 
 		public bool OnTesselation(ITerrainMeshPool mesher, ITesselatorAPI tesselator) {
-			if (mesh == null) return false;
+			if (Model == null) return false;
 
-			mesher.AddMeshData(mesh);
+			ICoreClientAPI capi = api as ICoreClientAPI;
+			mesher.AddMeshData(Model.GetBlockMesh(capi));
 			return true;
 		}
 
@@ -414,38 +344,15 @@ namespace ChiselAndSaw {
 			for (int x = 0; x < 16; x += selectionSize) {
 				for (int y = 0; y < 16; y += selectionSize) {
 					for (int z = 0; z < 16; z += selectionSize) {
-						if (BlockIn(new Vec3i(x, y, z))) {
-							boxes.Add(new Cuboidf(x / 16f, y / 16f, z / 16f, x / 16f + selectionSize / 16f, y / 16f + selectionSize / 16f, z / 16f + selectionSize / 16f));
+						if (Model.VoxelIn(x, y, z, x + selectionSize - 1, y + selectionSize - 1, z + selectionSize - 1)) {
+							boxes.Add(new Cuboidf(x / 16f, y / 16f, z / 16f,
+								x / 16f + selectionSize / 16f, y / 16f + selectionSize / 16f, z / 16f + selectionSize / 16f));
 						}
 					}
 				}
 			}
 
 			selectionBoxes = boxes.ToArray();
-		}
-
-		public void RegenMesh() {
-			ICoreClientAPI capi = api as ICoreClientAPI;
-			mesh = VoxelMesher.GenBlockMesh(voxels, capi, SrcBlock);
-		}
-
-		private static int at(int x, int y, int z) {
-			return x + 16 * (y + 16 * z);
-		}
-
-		byte[] serializeVoxels() {
-			byte[] data = new byte[16 * 16 * 16 / 8];
-			voxels.CopyTo(data, 0);
-			return data;
-		}
-
-		void deserializeVoxels(byte[] data) {
-			if (data == null || data.Length < 16 * 16 * 16 / 8) {
-				voxels = new BitArray(16 * 16 * 16);
-				voxels.SetAll(true);
-				return;
-			};
-			voxels = new BitArray(data);
 		}
 	}
 }

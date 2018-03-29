@@ -59,7 +59,7 @@ namespace ChiselAndSaw {
 
 						for (int f = 0; f < 6; f++) {
 							if (!sideVisible[f]) continue;
-							mesh.AddMeshData(GenQuad(f, x, y, z, 1, 1, capi, block));
+							mesh.AddMeshData(genQuad(f, x, y, z, 1, 1, capi, block));
 						}
 					}
 				}
@@ -67,7 +67,7 @@ namespace ChiselAndSaw {
 			return mesh;
 		}
 
-		private static MeshData GenQuad(int face, int x, int y, int z, int w, int h, ICoreClientAPI capi, Block block) {
+		private static MeshData genQuad(int face, int x, int y, int z, int w, int h, ICoreClientAPI capi, Block block) {
 			var shading = (byte)(255 * CubeMeshUtil.DefaultBlockSideShadingsByFacing[face]);
 
 			// I'm pretty sure this isn't correct for quads larger than w=1,h=1.
@@ -140,25 +140,25 @@ namespace ChiselAndSaw {
 			int oy = coords[coordIndexByFace[face][1]];
 			switch (face) {
 				case 0: // N
-					ox = 16 - ox;
-					oy = 16 - oy;
+					ox = 15 - ox;
+					oy = 15 - oy;
 					break;
 				case 1: // E
-					ox = 16 - ox;
-					oy = 16 - oy;
+					ox = 15 - ox;
+					oy = 15 - oy;
 					break;
 				case 2: // S
-					oy = 16 - oy;
+					oy = 15 - oy;
 					break;
 				case 3: // W
-					oy = 16 - oy;
+					oy = 15 - oy;
 					break;
 				case 4: // U
-					ox = 16 - ox;
-					oy = 16 - oy;
+					ox = 15 - ox;
+					oy = 15 - oy;
 					break;
 				default: // D
-					ox = 16 - ox;
+					ox = 15 - ox;
 					break;
 			}
 
