@@ -1,7 +1,20 @@
 {
 	code: "chisel",
 	class: "ItemChisel",
+	variantgroups: [
+		{ code: "material", states: ["copper", "tinbronze", "bismuthbronze", "blackbronze", "gold", "silver", "iron" ] },
+	],
 	shape: { base: "item/chisel" },
+	durabilitybytype: {
+		"chisel-gold": 125,
+		"chisel-silver": 125,
+		"chisel-copper": 250,
+		"chisel-tinbronze": 400,
+		"chisel-bismuthbronze": 500,
+		"chisel-blackbronze": 600,
+		"chisel-iron": 900,
+		"chisel-steel": 1200,
+	},
 	heldTpHitAnimation: "breaktool",
 	creativeinventory: { "general": ["*"], "items": ["*"] },
 	fpHandTransform: {

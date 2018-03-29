@@ -1,0 +1,10 @@
+{
+	ingredientPattern: "I,S",
+	ingredients: {
+		"I": { type: "item", code: "game:ingot-*", name: "material" allowedVariants: ["copper", "tinbronze", "bismuthbronze", "blackbronze", "silver", "gold", "iron"] },
+		"S": { type: "item", code: "game:stick" }
+	},
+	width: 1,
+	height: 2,
+	output: { type: "item", code: "chisel", quantity: 1  }
+}

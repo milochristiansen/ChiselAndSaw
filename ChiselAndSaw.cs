@@ -87,6 +87,7 @@ namespace VSExampleMods {
 		public bool OnBlockInteract(IWorldAccessor world, IPlayer byPlayer, BlockSelection blockSel, bool isBreak) {
 			BlockEntityChisel bec = world.BlockAccessor.GetBlockEntity(blockSel.Position) as BlockEntityChisel;
 			if (bec != null) {
+				Durability--;
 				bec.OnBlockInteract(byPlayer, blockSel, isBreak);
 				return true;
 			}
