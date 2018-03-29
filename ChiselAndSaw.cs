@@ -184,6 +184,7 @@ namespace VSExampleMods {
 			if (block != null) {
 				if (api.Side == EnumAppSide.Client) RegenMesh();
 				RegenSelectionBoxes();
+				MarkDirty(true);
 			}
 		}
 
@@ -210,6 +211,7 @@ namespace VSExampleMods {
 					break;
 			}
 			RegenSelectionBoxes();
+			MarkDirty(true);
 		}
 
 		internal void WasPlaced(Block block) {
@@ -220,8 +222,8 @@ namespace VSExampleMods {
 			if (api.Side == EnumAppSide.Client && mesh == null) {
 				RegenMesh();
 			}
-
 			RegenSelectionBoxes();
+			MarkDirty(true);
 		}
 
 		internal void OnBlockInteract(IPlayer byPlayer, BlockSelection blockSel, bool isBreak) {
@@ -256,7 +258,6 @@ namespace VSExampleMods {
 			if (api.Side == EnumAppSide.Client) {
 				RegenMesh();
 			}
-
 			RegenSelectionBoxes();
 			MarkDirty(true);
 
@@ -375,7 +376,7 @@ namespace VSExampleMods {
 			block = worldAccessForResolve.GetBlock((ushort)tree.GetInt("blockid"));
 			deserializeVoxels(tree.GetBytes("voxels"));
 
-			// Sometimes the api is null? Weird.
+			// Sometimes the api is null.
 			if (api != null && api.Side == EnumAppSide.Client && mesh == null) {
 				RegenMesh();
 			}

@@ -13,7 +13,6 @@ TODO:
 -------------------------------------------------------------------------------------------------------------------------
 
 * Show the current model while in inventory.
-* Change to using a bitmap instead of a bool array for voxel data.
-* Player faceing based rotation.
+* Player facing based rotation.
 * Block matrial and other properties should be based on the source block type.
 * Greedy meshing.
