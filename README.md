@@ -12,6 +12,7 @@ example is to be considered CC0.
 TODO:
 -------------------------------------------------------------------------------------------------------------------------
 
+* Fix mesh UVs.
 * Fix the inventory item transparency issues.
 * Block matrial and other properties should be based on the source block type (needs two chiseled block varients, wood and stone).
 * Compress the voxel data.
