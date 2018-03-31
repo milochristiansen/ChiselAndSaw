@@ -161,13 +161,13 @@ namespace ChiselAndSaw {
 		}
 
 		public override void OnBeforeRender(ICoreClientAPI capi, ItemStack itemstack, EnumItemRenderTarget target, ref ItemRenderInfo renderinfo) {
-			var mesh = ModelCache.Get(itemstack.Attributes.GetInt("meshid"), capi.Render, capi.World);
+			var mesh = ModelCache.Get(itemstack.Attributes.GetInt("meshid"), capi.Render, capi);
 			if (mesh == null) {
 				var tdata = VoxelModel.GetTreeData(itemstack.Attributes);
 				var block = capi.World.GetBlock(tdata.Item2);
 				var mdata = VoxelMesher.GenInventoryMesh(tdata.Item1, capi, block);
 				mesh = capi.Render.UploadMesh(mdata);
-				int mid = ModelCache.New(mesh, capi.Render, capi.World);
+				int mid = ModelCache.New(mesh, capi.Render, capi);
 				itemstack.Attributes.SetInt("meshid", mid);
 			}
 			renderinfo.ModelRef = mesh;

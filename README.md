@@ -16,3 +16,4 @@ TODO:
 * Block matrial and other properties should be based on the source block type (needs two chiseled block varients, wood and stone).
 * Greedy meshing.
 * Compress the voxel data.
+* Figure out how to apply AO

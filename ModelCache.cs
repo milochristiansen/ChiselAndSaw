@@ -4,11 +4,10 @@ using Vintagestory.API.Client;
 
 namespace ChiselAndSaw {
 	public static class ModelCache {
-		private static Dictionary<int, CacheModel> data = new Dictionary<int, CacheModel>();
 		private static int lastID = 0;
 		private static long lastCollect;
 
-		private static void collect(IRenderAPI render, IClientWorldAccessor world) {
+		private static void collect(IRenderAPI render, IClientWorldAccessor world, Dictionary<int, CacheModel> data) {
 			if (lastCollect > world.ElapsedMilliseconds - 1000) {
 				return;
 			}
@@ -25,23 +24,36 @@ namespace ChiselAndSaw {
 			}
 		}
 
-		public static int New(MeshRef mesh, IRenderAPI render, IClientWorldAccessor world) {
+		public static int New(MeshRef mesh, IRenderAPI render, ICoreClientAPI capi) {
+			var data = getData(capi);
 			lastID++;
-			data[lastID] = new CacheModel { Mesh = mesh, Lived = world.ElapsedMilliseconds };
-			collect(render, world);
+			data[lastID] = new CacheModel { Mesh = mesh, Lived = capi.World.ElapsedMilliseconds };
+			collect(render, capi.World, data);
 			return lastID;
 		}
 
-		public static MeshRef Get(int id, IRenderAPI render, IClientWorldAccessor world) {
-			collect(render, world);
+		public static MeshRef Get(int id, IRenderAPI render, ICoreClientAPI capi) {
+			var data = getData(capi);
+			collect(render, capi.World, data);
 
 			CacheModel model;
 			var ok = data.TryGetValue(id, out model);
 			if (ok) {
-				model.Lived = world.ElapsedMilliseconds;
+				model.Lived = capi.World.ElapsedMilliseconds;
 				return model.Mesh;
 			}
 			return null;
+		}
+
+		private static Dictionary<int, CacheModel> getData(ICoreClientAPI capi) {
+			object data;
+			bool ok = capi.ObjectCache.TryGetValue("chiselandsaw-modelcache", out data);
+			if (!ok) {
+				var ndata = new Dictionary<int, CacheModel>();
+				capi.ObjectCache["chiselandsaw-modelcache"] = ndata;
+				return ndata;
+			}
+			return data as Dictionary<int, CacheModel>;
 		}
 	}
 
