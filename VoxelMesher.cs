@@ -322,13 +322,25 @@ namespace ChiselAndSaw {
 
 			// Correct the UVs for translation.
 			// Appears to work for north and east, but I can't seem to get the other directions...
-			// var coords = new float[] { xf, yf, zf };
-			// var uo = coords[coordIndexByFace[face][0]];
-			// var vo = coords[coordIndexByFace[face][1]];
-			// for (int j = 0; j < quad.Uv.Length; j += 2) {
-			// 	quad.Uv[j] = quad.Uv[j] + (1f - wf) - uo;
-			// 	quad.Uv[j + 1] = quad.Uv[j + 1] + (1f - hf) - vo;
-			// }
+			var coords = new float[] { xf, yf, zf };
+			var uo = coords[coordIndexByFace[face][0]];
+			var vo = coords[coordIndexByFace[face][1]];
+			if (face == 0 || face == 1 || face == 4) {
+				for (int j = 0; j < quad.Uv.Length; j += 2) {
+					quad.Uv[j] = quad.Uv[j] + (1f - wf) - uo;
+					quad.Uv[j + 1] = quad.Uv[j + 1] + (1f - hf) - vo;
+				}
+			} else if (face == 2 || face == 3) {
+				for (int j = 0; j < quad.Uv.Length; j += 2) {
+					quad.Uv[j] = quad.Uv[j] + uo;
+					quad.Uv[j + 1] = quad.Uv[j + 1] + (1f - hf) - vo;
+				}
+			} else {
+				for (int j = 0; j < quad.Uv.Length; j += 2) {
+					quad.Uv[j] = quad.Uv[j] + (1f - wf) - uo;
+					quad.Uv[j + 1] = quad.Uv[j + 1] + vo;
+				}
+			}
 
 			// Scale the UVs to fit the texture.
 			float padding = capi.BlockTextureAtlas.SubPixelPadding;
