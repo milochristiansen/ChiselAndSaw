@@ -61,7 +61,7 @@ namespace ChiselAndSaw {
 			return At(pos.X, pos.Y, pos.Z);
 		}
 		public bool At(int x, int y, int z) {
-			if (x > 16 || x < 0 || y > 16 || y < 0 || z > 16 || z < 0) {
+			if (x > 15 || x < 0 || y > 15 || y < 0 || z > 15 || z < 0) {
 				return false;
 			}
 			return voxels[at(x, y, z)];
@@ -72,8 +72,8 @@ namespace ChiselAndSaw {
 			SetVoxels(tl.X, tl.Y, tl.Z, br.X, br.Y, br.Z, state);
 		}
 		public void SetVoxels(int x1, int y1, int z1, int x2, int y2, int z2, bool state) {
-			if (x1 > 16 || x1 < 0 || y1 > 16 || y1 < 0 || z1 > 16 || z1 < 0 ||
-				x2 > 16 || x2 < 0 || y2 > 16 || y2 < 0 || z2 > 16 || z2 < 0) {
+			if (x1 > 15 || x1 < 0 || y1 > 15 || y1 < 0 || z1 > 15 || z1 < 0 ||
+				x2 > 15 || x2 < 0 || y2 > 15 || y2 < 0 || z2 > 15 || z2 < 0) {
 				return;
 			}
 			inventorymesh = null;
@@ -92,8 +92,8 @@ namespace ChiselAndSaw {
 			return VoxelIn(tl.X, tl.Y, tl.Z, br.X, br.Y, br.Z);
 		}
 		public bool VoxelIn(int x1, int y1, int z1, int x2, int y2, int z2) {
-			if (x1 > 16 || x1 < 0 || y1 > 16 || y1 < 0 || z1 > 16 || z1 < 0 ||
-				x2 > 16 || x2 < 0 || y2 > 16 || y2 < 0 || z2 > 16 || z2 < 0) {
+			if (x1 > 15 || x1 < 0 || y1 > 15 || y1 < 0 || z1 > 15 || z1 < 0 ||
+				x2 > 15 || x2 < 0 || y2 > 15 || y2 < 0 || z2 > 15 || z2 < 0) {
 				return false;
 			}
 			for (int x = x1; x <= x2; x++) {
@@ -113,8 +113,8 @@ namespace ChiselAndSaw {
 			return LastVoxel(tl.X, tl.Y, tl.Z, br.X, br.Y, br.Z);
 		}
 		public bool LastVoxel(int x1, int y1, int z1, int x2, int y2, int z2) {
-			if (x1 > 16 || x1 < 0 || y1 > 16 || y1 < 0 || z1 > 16 || z1 < 0 ||
-				x2 > 16 || x2 < 0 || y2 > 16 || y2 < 0 || z2 > 16 || z2 < 0) {
+			if (x1 > 15 || x1 < 0 || y1 > 15 || y1 < 0 || z1 > 15 || z1 < 0 ||
+				x2 > 15 || x2 < 0 || y2 > 15 || y2 < 0 || z2 > 15 || z2 < 0) {
 				return true;
 			}
 			for (int x = 0; x < 16; x++) {

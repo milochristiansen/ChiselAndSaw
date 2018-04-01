@@ -41,61 +41,6 @@ namespace ChiselAndSaw {
 
 		private static MeshData genMesh(BitArray voxels, ICoreClientAPI capi, Block block) {
 			var mesh = new MeshData(24, 36, false).WithTints().WithRenderpasses();
-
-			// The New! Shiny! Inefficent! version.
-			// Dynamically generating the needed quads is a step along the path to greedy meshing though.
-			// bool[] sideVisible = new bool[6];
-			// for (int x = 0; x < 16; x++) {
-			// 	for (int y = 0; y < 16; y++) {
-			// 		for (int z = 0; z < 16; z++) {
-			// 			if (!voxels[at(x, y, z)]) continue;
-
-			// 			sideVisible[0] = z == 0 || !voxels[at(x, y, z - 1)];
-			// 			sideVisible[1] = x == 15 || !voxels[at(x + 1, y, z)];
-			// 			sideVisible[2] = z == 15 || !voxels[at(x, y, z + 1)];
-			// 			sideVisible[3] = x == 0 || !voxels[at(x - 1, y, z)];
-			// 			sideVisible[4] = y == 15 || !voxels[at(x, y + 1, z)];
-			// 			sideVisible[5] = y == 0 || !voxels[at(x, y - 1, z)];
-
-			// 			for (int f = 0; f < 6; f++) {
-			// 				if (!sideVisible[f]) continue; // TEMPORARY: Disabled generation of north an south faces.
-			// 				mesh.AddMeshData(genQuad(f, x, y, z, 1, 1, capi, block));
-			// 			}
-			// 		}
-			// 	}
-			// }
-
-			// Fully cover a cube.
-			// mesh.AddMeshData(genQuad(0, 0, 0, 0, 16, 16, capi, block));
-			// mesh.AddMeshData(genQuad(1, 15, 0, 0, 16, 16, capi, block));
-			// mesh.AddMeshData(genQuad(2, 0, 0, 15, 16, 16, capi, block));
-			// mesh.AddMeshData(genQuad(3, 0, 0, 0, 16, 16, capi, block));
-			// mesh.AddMeshData(genQuad(4, 0, 15, 0, 16, 16, capi, block));
-			// mesh.AddMeshData(genQuad(5, 0, 0, 0, 16, 16, capi, block));
-
-			// Fully cover a small cube.
-			// mesh.AddMeshData(genQuad(0, 3, 3, 3, 8, 8, capi, block));
-			// mesh.AddMeshData(genQuad(1, 10, 3, 3, 8, 8, capi, block));
-			// mesh.AddMeshData(genQuad(2, 3, 3, 10, 8, 8, capi, block));
-			// mesh.AddMeshData(genQuad(3, 3, 3, 3, 8, 8, capi, block));
-			// mesh.AddMeshData(genQuad(4, 3, 10, 3, 8, 8, capi, block));
-			// mesh.AddMeshData(genQuad(5, 3, 3, 3, 8, 8, capi, block));
-
-			// Draws narrow quads in the corners.
-			// mesh.AddMeshData(genQuad(0, 10, 0, 0, 6, 10, capi, block));
-			// mesh.AddMeshData(genQuad(1, 15, 0, 0, 6, 10, capi, block));
-			// mesh.AddMeshData(genQuad(2, 0, 0, 15, 6, 10, capi, block));
-			// mesh.AddMeshData(genQuad(3, 0, 0, 10, 6, 10, capi, block));
-			// mesh.AddMeshData(genQuad(0, 0, 0, 0, 6, 10, capi, block));
-			// mesh.AddMeshData(genQuad(1, 15, 0, 10, 6, 10, capi, block));
-			// mesh.AddMeshData(genQuad(2, 10, 0, 15, 6, 10, capi, block));
-			// mesh.AddMeshData(genQuad(3, 0, 0, 0, 6, 10, capi, block));
-
-			// mesh.AddMeshData(genQuad(4, 0, 0, 0, 6, 10, capi, block));
-			// mesh.AddMeshData(genQuad(5, 0, 0, 0, 6, 10, capi, block));
-			// mesh.AddMeshData(genQuad(4, 0, 15, 0, 6, 10, capi, block));
-			// mesh.AddMeshData(genQuad(5, 0, 0, 0, 6, 10, capi, block));
-
 			meshFacing(0, mesh, voxels, capi, block);
 			meshFacing(1, mesh, voxels, capi, block);
 			meshFacing(2, mesh, voxels, capi, block);
@@ -113,7 +58,6 @@ namespace ChiselAndSaw {
 			}
 		}
 		private static bool exposedAt(int axis, int offset, BitArray voxels, bool[,] mask, int a, int b, int c) {
-			// maskB[b, c] || !(a == 15 || !voxels[at(b, c, a + 1)])
 			if (!voxelAt(axis, voxels, mask, a, b, c)) {
 				return false;
 			}
@@ -167,8 +111,7 @@ namespace ChiselAndSaw {
 				int debug = 0;
 				for (int b = 0; b < 16; b++) {
 					for (int c = 0; c < 16; c++) {
-						if (!voxelAt(axis, voxels, maskA, a, b, c)) continue;
-						// If the cell is not masked and the north side is exposed:
+						// If the cell is not masked and the first side is exposed:
 						if (exposedAt(axis, -1, voxels, maskA, a, b, c)) {
 							// Count as many unmasked and exposed cells as you can along the first axis
 							int w = 1;
@@ -208,6 +151,8 @@ namespace ChiselAndSaw {
 							}
 							mesh.AddMeshData(genQuad(faceA, coords.X, coords.Y, coords.Z, w, h, capi, block));
 							debug++;
+						} else {
+							maskA[b, c] = true;
 						}
 						if (exposedAt(axis, 1, voxels, maskB, a, b, c)) {
 							int w = 1;
@@ -243,11 +188,31 @@ namespace ChiselAndSaw {
 								h = t;
 							}
 							mesh.AddMeshData(genQuad(faceB, coords.X, coords.Y, coords.Z, w, h, capi, block));
+						} else {
+							maskB[b, c] = true;
 						}
 					}
 				}
-			}
 
+				var uncovered = 0;
+				foreach (var covered in maskA) {
+					if (!covered) {
+						uncovered++;
+					}
+				}
+				if (uncovered > 0) {
+					capi.World.Logger.Debug("{0} Uncovered voxel sides on face A, pass {1}.", uncovered, axis);
+				}
+				uncovered = 0;
+				foreach (var covered in maskB) {
+					if (!covered) {
+						uncovered++;
+					}
+				}
+				if (uncovered > 0) {
+					capi.World.Logger.Debug("{0} Uncovered voxel sides on face B, pass {1}.", uncovered, axis);
+				}
+			}
 		}
 
 		private static MeshData genQuad(int face, int x, int y, int z, int w, int h, ICoreClientAPI capi, Block block) {
@@ -341,6 +306,23 @@ namespace ChiselAndSaw {
 					quad.Uv[j + 1] = quad.Uv[j + 1] + vo;
 				}
 			}
+
+			// For debugging mesh generation. Makes horizontal quads show the full texture per quad...
+			// Kinda. There is some skewing and other issues.
+			// if (face < 4) {
+			// 	int i = 0;
+			// 	quad.Uv[i + 0] = 0;
+			// 	quad.Uv[i + 1] = 0;
+			// 	i++;
+			// 	quad.Uv[i + 0] = 1;
+			// 	quad.Uv[i + 1] = 0;
+			// 	i++;
+			// 	quad.Uv[i + 0] = 1;
+			// 	quad.Uv[i + 1] = 0;
+			// 	i++;
+			// 	quad.Uv[i + 0] = 1;
+			// 	quad.Uv[i + 1] = 1;
+			// }
 
 			// Scale the UVs to fit the texture.
 			float padding = capi.BlockTextureAtlas.SubPixelPadding;
