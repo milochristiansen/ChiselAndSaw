@@ -1,0 +1,20 @@
+{
+	code: "glass",
+	class: "BlockChisel",
+	entityClass: "BlockEntityChisel",
+	creativeinventory: { "general": [""] },
+	shape: { base: "game:block/basic/cube" },
+	replaceable: 90,
+	maxStackSize: 1,
+	sidesolid: { all: false },
+	sideopaque: { all: false },
+	sideao: { all: false },
+	blockmaterial: "Glass",
+	renderpass: "transparent",
+	faceCullMode: "MergeMaterial",
+	resistance: 0.25,
+	sounds: {
+		"place": "player/buildhigh",
+		"break": "block/glass"
+	},
+}

@@ -1,0 +1,20 @@
+{
+	code: "ice",
+	class: "BlockChisel",
+	entityClass: "BlockEntityChisel",
+	creativeinventory: { "general": [""] },
+	shape: { base: "game:block/basic/cube" },
+	replaceable: 90,
+	maxStackSize: 1,
+	sidesolid: { all: false },
+	sideopaque: { all: false },
+	sideao: { all: false },
+	blockmaterial: "Ice",
+	renderpass: "transparent",
+	faceCullMode: "Merge",
+	resistance: 0.5,
+	sounds: {
+		"walk": "walk/ice"
+	},
+	dragMultiplier: 0.02,
+}

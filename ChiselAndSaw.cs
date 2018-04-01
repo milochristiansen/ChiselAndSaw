@@ -23,9 +23,15 @@ namespace ChiselAndSaw {
 			}
 
 			Block block = byEntity.World.BlockAccessor.GetBlock(blockSel.Position);
-			Block chiseledblock = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:chiseledblock"));
+			Block stone = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:stone"));
+			Block wood = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:wood"));
+			Block plant = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:plant"));
+			Block ice = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:ice"));
+			Block ceramic = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:ceramic"));
+			Block glass = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:glass"));
+			Block metal = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:metal"));
 
-			if (block == chiseledblock) {
+			if (block == stone || block == wood || block == plant || block == ice || block == ceramic || block == glass || block == metal) {
 				IPlayer byPlayer = null;
 				if (byEntity is IEntityPlayer) {
 					byPlayer = byEntity.World.PlayerByUid(((IEntityPlayer)byEntity).PlayerUID);
@@ -45,9 +51,15 @@ namespace ChiselAndSaw {
 			}
 
 			Block block = byEntity.World.BlockAccessor.GetBlock(blockSel.Position);
-			Block chiseledblock = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:chiseledblock"));
+			Block stone = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:stone"));
+			Block wood = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:wood"));
+			Block plant = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:plant"));
+			Block ice = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:ice"));
+			Block ceramic = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:ceramic"));
+			Block glass = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:glass"));
+			Block metal = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:metal"));
 
-			if (block == chiseledblock) {
+			if (block == stone || block == wood || block == plant || block == ice || block == ceramic || block == glass || block == metal) {
 				IPlayer byPlayer = null;
 				if (byEntity is IEntityPlayer) {
 					byPlayer = byEntity.World.PlayerByUid(((IEntityPlayer)byEntity).PlayerUID);
@@ -78,7 +90,44 @@ namespace ChiselAndSaw {
 				return false;
 			}
 
-			byEntity.World.BlockAccessor.SetBlock(chiseledblock.BlockId, blockSel.Position);
+			switch (block.BlockMaterial) {
+				case EnumBlockMaterial.Air:
+				case EnumBlockMaterial.Cloth:
+				case EnumBlockMaterial.Fire:
+				case EnumBlockMaterial.Gravel:
+				case EnumBlockMaterial.Lava:
+				case EnumBlockMaterial.Leaves:
+				case EnumBlockMaterial.Liquid:
+				case EnumBlockMaterial.Mantle:
+				case EnumBlockMaterial.Meta:
+				case EnumBlockMaterial.Other:
+				case EnumBlockMaterial.Plant:
+				case EnumBlockMaterial.Sand:
+				case EnumBlockMaterial.Snow:
+				case EnumBlockMaterial.Soil:
+					return false;
+				case EnumBlockMaterial.Brick:
+				case EnumBlockMaterial.Ceramic:
+					byEntity.World.BlockAccessor.SetBlock(ceramic.BlockId, blockSel.Position);
+					break;
+				case EnumBlockMaterial.Glass:
+					byEntity.World.BlockAccessor.SetBlock(glass.BlockId, blockSel.Position);
+					break;
+				case EnumBlockMaterial.Ice:
+					byEntity.World.BlockAccessor.SetBlock(ice.BlockId, blockSel.Position);
+					break;
+				case EnumBlockMaterial.Metal:
+					byEntity.World.BlockAccessor.SetBlock(metal.BlockId, blockSel.Position);
+					break;
+				case EnumBlockMaterial.Ore:
+				case EnumBlockMaterial.Stone:
+					byEntity.World.BlockAccessor.SetBlock(stone.BlockId, blockSel.Position);
+					break;
+				case EnumBlockMaterial.Wood:
+					byEntity.World.BlockAccessor.SetBlock(wood.BlockId, blockSel.Position);
+					break;
+			}
+
 
 			BlockEntityChisel be = byEntity.World.BlockAccessor.GetBlockEntity(blockSel.Position) as BlockEntityChisel;
 			if (be == null) {

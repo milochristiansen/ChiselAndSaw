@@ -1,5 +1,5 @@
 {
-	code: "chiseledblock",
+	code: "wood",
 	class: "BlockChisel",
 	entityClass: "BlockEntityChisel",
 	creativeinventory: { "general": [""] },
@@ -8,5 +8,14 @@
 	maxStackSize: 1,
 	sidesolid: { all: false },
 	sideopaque: { all: false },
-	sideao: { all: false }
+	sideao: { all: false },
+	blockmaterial: "Wood",
+	sounds: {
+		"place": "block/planks",
+		"walk": "walk/wood"
+	},
+	combustibleProps: {
+		burnTemperature: 800,
+		burnDuration: 10,
+	},
 }
