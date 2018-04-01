@@ -11,6 +11,7 @@ namespace ChiselAndSaw {
 			if (lastCollect > world.ElapsedMilliseconds - 1000) {
 				return;
 			}
+			lastCollect = world.ElapsedMilliseconds;
 
 			var toKill = new List<int>();
 			foreach (var item in data) {

@@ -13,7 +13,6 @@ TODO:
 -------------------------------------------------------------------------------------------------------------------------
 
 * Fix the inventory item transparency issues.
-* Block matrial and other properties should be based on the source block type (needs two chiseled block varients, wood and stone).
 * Compress the voxel data.
 * Apply AO (requires new engine feature).
 * Fix the block breaking decals (requires new engine feature).
