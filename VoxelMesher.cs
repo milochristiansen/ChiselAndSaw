@@ -7,39 +7,17 @@ using Vintagestory.API.Util;
 
 namespace ChiselAndSaw {
 	public static class VoxelMesher {
-		public static MeshData GenInventoryMesh(byte[] data, ICoreClientAPI capi, Block block) {
-			if (data == null || data.Length < 16 * 16 * 16 / 8) {
-				return null;
-			};
-			var mesh = genMesh(new BitArray(data), capi, block);
-			mesh.rgba2 = null;
-			return mesh;
-		}
-
-		public static MeshData GenInventoryMesh(BitArray data, ICoreClientAPI capi, Block block) {
-			if (data == null || data.Length < 16 * 16 * 16) {
-				return null;
-			};
+		public static MeshData GenInventoryMesh(IVoxelProvider data, ICoreClientAPI capi, Block block) {
 			var mesh = genMesh(data, capi, block);
 			mesh.rgba2 = null;
 			return mesh;
 		}
 
-		public static MeshData GenBlockMesh(byte[] data, ICoreClientAPI capi, Block block) {
-			if (data == null || data.Length < 16 * 16 * 16 / 8) {
-				return null;
-			};
-			return genMesh(new BitArray(data), capi, block);
-		}
-
-		public static MeshData GenBlockMesh(BitArray data, ICoreClientAPI capi, Block block) {
-			if (data == null || data.Length < 16 * 16 * 16) {
-				return null;
-			};
+		public static MeshData GenBlockMesh(IVoxelProvider data, ICoreClientAPI capi, Block block) {
 			return genMesh(data, capi, block);
 		}
 
-		private static MeshData genMesh(BitArray voxels, ICoreClientAPI capi, Block block) {
+		private static MeshData genMesh(IVoxelProvider voxels, ICoreClientAPI capi, Block block) {
 			var mesh = new MeshData(24, 36, false).WithTints().WithRenderpasses();
 			meshFacing(0, mesh, voxels, capi, block);
 			meshFacing(1, mesh, voxels, capi, block);
@@ -47,17 +25,17 @@ namespace ChiselAndSaw {
 			return mesh;
 		}
 
-		private static bool voxelAt(int axis, BitArray voxels, bool[,] mask, int a, int b, int c) {
+		private static bool voxelAt(int axis, IVoxelProvider voxels, bool[,] mask, int a, int b, int c) {
 			switch (axis) {
 				case 0:
-					return !mask[b, c] && voxels[at(b, c, a)];
+					return !mask[b, c] && voxels.Get(b, c, a);
 				case 1:
-					return !mask[b, c] && voxels[at(a, b, c)];
+					return !mask[b, c] && voxels.Get(a, b, c);
 				default:
-					return !mask[b, c] && voxels[at(b, a, c)];
+					return !mask[b, c] && voxels.Get(b, a, c);
 			}
 		}
-		private static bool exposedAt(int axis, int offset, BitArray voxels, bool[,] mask, int a, int b, int c) {
+		private static bool exposedAt(int axis, int offset, IVoxelProvider voxels, bool[,] mask, int a, int b, int c) {
 			if (!voxelAt(axis, voxels, mask, a, b, c)) {
 				return false;
 			}
@@ -67,11 +45,11 @@ namespace ChiselAndSaw {
 			}
 			switch (axis) {
 				case 0:
-					return !mask[b, c] && (a == edge || !voxels[at(b, c, a + offset)]);
+					return !mask[b, c] && (a == edge || !voxels.Get(b, c, a + offset));
 				case 1:
-					return !mask[b, c] && (a == edge || !voxels[at(a + offset, b, c)]);
+					return !mask[b, c] && (a == edge || !voxels.Get(a + offset, b, c));
 				default:
-					return !mask[b, c] && (a == edge || !voxels[at(b, a + offset, c)]);
+					return !mask[b, c] && (a == edge || !voxels.Get(b, a + offset, c));
 			}
 		}
 
@@ -86,7 +64,7 @@ namespace ChiselAndSaw {
 			}
 		}
 
-		private static void meshFacing(int axis, MeshData mesh, BitArray voxels, ICoreClientAPI capi, Block block) {
+		private static void meshFacing(int axis, MeshData mesh, IVoxelProvider voxels, ICoreClientAPI capi, Block block) {
 			for (int a = 0; a < 16; a++) {
 				var maskA = new bool[16, 16];
 				var maskB = new bool[16, 16];

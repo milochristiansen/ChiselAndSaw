@@ -12,7 +12,8 @@ example is to be considered CC0.
 TODO:
 -------------------------------------------------------------------------------------------------------------------------
 
+* Chisel item does not fit on tool racks properly.
 * Fix the inventory item transparency issues.
-* Compress the voxel data.
+* Inlays. At least gems and precious metals, but possibly any ol' thing.
 * Apply AO (requires new engine feature).
 * Fix the block breaking decals (requires new engine feature).

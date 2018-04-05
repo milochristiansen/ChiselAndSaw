@@ -25,13 +25,12 @@ namespace ChiselAndSaw {
 			Block block = byEntity.World.BlockAccessor.GetBlock(blockSel.Position);
 			Block stone = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:stone"));
 			Block wood = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:wood"));
-			Block plant = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:plant"));
 			Block ice = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:ice"));
 			Block ceramic = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:ceramic"));
 			Block glass = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:glass"));
 			Block metal = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:metal"));
 
-			if (block == stone || block == wood || block == plant || block == ice || block == ceramic || block == glass || block == metal) {
+			if (block == stone || block == wood || block == ice || block == ceramic || block == glass || block == metal) {
 				IPlayer byPlayer = null;
 				if (byEntity is IEntityPlayer) {
 					byPlayer = byEntity.World.PlayerByUid(((IEntityPlayer)byEntity).PlayerUID);
@@ -53,13 +52,12 @@ namespace ChiselAndSaw {
 			Block block = byEntity.World.BlockAccessor.GetBlock(blockSel.Position);
 			Block stone = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:stone"));
 			Block wood = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:wood"));
-			Block plant = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:plant"));
 			Block ice = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:ice"));
 			Block ceramic = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:ceramic"));
 			Block glass = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:glass"));
 			Block metal = byEntity.World.GetBlock(new AssetLocation("chiselandsaw:metal"));
 
-			if (block == stone || block == wood || block == plant || block == ice || block == ceramic || block == glass || block == metal) {
+			if (block == stone || block == wood || block == ice || block == ceramic || block == glass || block == metal) {
 				IPlayer byPlayer = null;
 				if (byEntity is IEntityPlayer) {
 					byPlayer = byEntity.World.PlayerByUid(((IEntityPlayer)byEntity).PlayerUID);
@@ -206,6 +204,7 @@ namespace ChiselAndSaw {
 				byItemStack.Attributes.SetInt("posz", pos.Z);
 
 				be.FromTreeAtributes(byItemStack.Attributes, world);
+				be.MarkDirty(true);
 			}
 		}
 
@@ -371,11 +370,13 @@ namespace ChiselAndSaw {
 		public override void FromTreeAtributes(ITreeAttribute tree, IWorldAccessor worldAccessForResolve) {
 			base.FromTreeAtributes(tree, worldAccessForResolve);
 			Model = new VoxelModel(tree, worldAccessForResolve);
+			selectionSize = tree.GetInt("selectionSize", 8);
 			RegenSelectionBoxes();
 		}
 
 		public override void ToTreeAttributes(ITreeAttribute tree) {
 			base.ToTreeAttributes(tree);
+			tree.SetInt("selectionSize", selectionSize);
 			Model.Serialize(tree);
 		}
 

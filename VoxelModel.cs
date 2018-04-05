@@ -7,64 +7,41 @@ using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 
 namespace ChiselAndSaw {
+	public interface IVoxelProvider {
+		bool Get(int x, int y, int z);
+		void Set(int x, int y, int z, bool state);
+		void Reduce();
+		void Serialize(ITreeAttribute tree);
+	}
+
 	public class VoxelModel {
 		public Block SrcBlock; // The block used for textures and such.
-		BitArray voxels;
+		IVoxelProvider voxels;
 		MeshData inventorymesh = null;
 		MeshData blockmesh = null;
 
-		public VoxelModel(byte[] data, Block block) {
-			SrcBlock = block;
-			if (data == null || data.Length < 16 * 16 * 16 / 8) {
-				voxels = new BitArray(16 * 16 * 16);
-				voxels.SetAll(true);
-				return;
-			};
-			voxels = new BitArray(data);
-		}
-
-		public VoxelModel(BitArray data, Block block) {
-			SrcBlock = block;
-			if (data == null || data.Length < 16 * 16 * 16) {
-				voxels = new BitArray(16 * 16 * 16);
-				voxels.SetAll(true);
-				return;
-			};
-			voxels = data;
-		}
-
 		public VoxelModel(Block block) {
 			SrcBlock = block;
-			voxels = new BitArray(16 * 16 * 16);
-			voxels.SetAll(true);
+			voxels = new VoxelArray(true);
 		}
 
 		public VoxelModel(ITreeAttribute tree, IWorldAccessor worldAccessForResolve) {
 			SrcBlock = worldAccessForResolve.GetBlock((ushort)tree.GetInt("voxelmodel-id"));
-			var data = tree.GetBytes("voxelmodel-shape");
-			if (data == null || data.Length < 16 * 16 * 16 / 8) {
-				voxels = new BitArray(16 * 16 * 16);
-				voxels.SetAll(true);
-				return;
-			};
-			voxels = new BitArray(data);
+			voxels = new VoxelArray(tree);
 		}
 
 		private VoxelModel() { }
 
-		public static Tuple<byte[], ushort> GetTreeData(ITreeAttribute tree) {
-			return Tuple.Create(tree.GetBytes("voxelmodel-shape"), (ushort)tree.GetInt("voxelmodel-id"));
+		public static Tuple<IVoxelProvider, ushort> GetTreeData(ITreeAttribute tree) {
+			return Tuple.Create((IVoxelProvider)new VoxelArray(tree), (ushort)tree.GetInt("voxelmodel-id"));
 		}
 
 		// At returns true if there is an active voxel at the given location.
 		public bool At(Vec3i pos) {
-			return At(pos.X, pos.Y, pos.Z);
+			return voxels.Get(pos.X, pos.Y, pos.Z);
 		}
 		public bool At(int x, int y, int z) {
-			if (x > 15 || x < 0 || y > 15 || y < 0 || z > 15 || z < 0) {
-				return false;
-			}
-			return voxels[at(x, y, z)];
+			return voxels.Get(x, y, z);
 		}
 
 		// SetVoxels sets the state of the voxels in the given region.
@@ -81,10 +58,11 @@ namespace ChiselAndSaw {
 			for (int x = x1; x <= x2; x++) {
 				for (int y = y1; y <= y2; y++) {
 					for (int z = z1; z <= z2; z++) {
-						voxels[at(x, y, z)] = state;
+						voxels.Set(x, y, z, state);
 					}
 				}
 			}
+			voxels.Reduce();
 		}
 
 		// VoxelIn returns true if there is an active voxel in the given region.
@@ -99,7 +77,7 @@ namespace ChiselAndSaw {
 			for (int x = x1; x <= x2; x++) {
 				for (int y = y1; y <= y2; y++) {
 					for (int z = z1; z <= z2; z++) {
-						if (voxels[at(x, y, z)]) {
+						if (voxels.Get(x, y, z)) {
 							return true;
 						}
 					}
@@ -120,7 +98,7 @@ namespace ChiselAndSaw {
 			for (int x = 0; x < 16; x++) {
 				for (int y = 0; y < 16; y++) {
 					for (int z = 0; z < 16; z++) {
-						if (voxels[at(x, y, z)]) {
+						if (voxels.Get(x, y, z)) {
 							if ((x >= x1 && x <= x2) &&
 								(y >= y1 && y <= y2) &&
 								(z >= z1 && z <= z2)) {
@@ -138,7 +116,7 @@ namespace ChiselAndSaw {
 			for (int x = 0; x < 16; x++) {
 				for (int y = 0; y < 16; y++) {
 					for (int z = 0; z < 16; z++) {
-						if (!voxels[at(x, y, z)]) {
+						if (!voxels.Get(x, y, z)) {
 							return false;
 						}
 					}
@@ -152,14 +130,14 @@ namespace ChiselAndSaw {
 			inventorymesh = null;
 			blockmesh = null;
 
-			var nvoxels = new BitArray(16 * 16 * 16);
+			var nvoxels = new VoxelArray(false);
 			for (int y = 0; y < 16; y++) {
 				for (int x = 0; x < 16; x++) {
 					for (int z = 0; z < 16; z++) {
 						if (right) {
-							nvoxels[at(x, y, z)] = voxels[at(16 - z - 1, y, x)];
+							nvoxels.Set(x, y, z, voxels.Get(16 - z - 1, y, x));
 						} else {
-							nvoxels[at(x, y, z)] = voxels[at(z, y, 16 - x - 1)];
+							nvoxels.Set(x, y, z, voxels.Get(z, y, 16 - x - 1));
 						}
 					}
 				}
@@ -170,9 +148,7 @@ namespace ChiselAndSaw {
 		// Serialize stores all the information required to recreate this model into a tree attribute.
 		public void Serialize(ITreeAttribute tree) {
 			tree.SetInt("voxelmodel-id", SrcBlock.BlockId);
-			byte[] data = new byte[16 * 16 * 16 / 8];
-			voxels.CopyTo(data, 0);
-			tree.SetBytes("voxelmodel-shape", data);
+			voxels.Serialize(tree);
 		}
 
 		public MeshData GetInventoryMesh(ICoreClientAPI capi) {
