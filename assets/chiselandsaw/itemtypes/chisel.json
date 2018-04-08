@@ -25,11 +25,12 @@
 	creativeinventory: { "general": ["*"], "items": ["*"] },
 	fpHandTransform: {
 		rotation: { x: 67, y: 90, z: -30 },
-		origin: { x: 0.5, y: 0.25, z: 0.5 }
+		origin: { x: 0.5, y: 0.25, z: 0.5 },
+		scale: 2.5
 	},
 	guiTransform: {
-		translation: { x: 0, y: 0, z: 0 },
-		rotation: { x: 0, y: -42, z: -54 },
+		translation: { x: 7, y: 1, z: 0 },
+		rotation: { x: -63, y: 38, z: -27 },
 		origin: { x: 0.6, y: 0.05, z: 0.6 },
 		scale: 2.5
 	},
@@ -38,5 +39,10 @@
 		rotation: { x: 0, y: 0, z: 0 },
 		origin: { x: 0.5, y: 0.1, z: 0.5 },
 		scale: 0.76
-	}
+	},
+	groundTransform: {
+		rotation: { x: 67, y: 90, z: -30 },
+		origin: { x: 0.5, y: 0.25, z: 0.5 },
+		scale: 2.5
+	},
 }
