@@ -113,7 +113,6 @@ namespace ChiselAndSaw {
 			for (var i = 7; i >= 0; i--) {
 				int offset = getOffset(me, i);
 				if ((data[me] & homogeneous[i]) == 0) {
-					offset--;
 					reduce(me + offset + 1, me, i);
 				}
 				if ((data[me] & homogeneous[i]) != 0) {
@@ -126,11 +125,6 @@ namespace ChiselAndSaw {
 			}
 			if (full == 8 || empty == 8) {
 				var poffset = getOffset(parent, index);
-				for (var i = 0; i <= index; i++) {
-					if ((data[me] & homogeneous[i]) == 0) {
-						poffset++;
-					}
-				}
 				data[parent] = (ushort)(data[parent] | homogeneous[index]);
 				if (full == 8) {
 					data[parent] = (ushort)(data[parent] | hasVoxels[index]);

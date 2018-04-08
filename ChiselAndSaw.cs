@@ -241,11 +241,6 @@ namespace ChiselAndSaw {
 
 		public override void Initialize(ICoreAPI api) {
 			base.Initialize(api);
-
-			if (Model != null) {
-				RegenSelectionBoxes();
-				MarkDirty(true);
-			}
 		}
 
 		public void SetSelSize(int mode) {
@@ -258,13 +253,9 @@ namespace ChiselAndSaw {
 					}
 					break;
 				case 2:
-					selectionSize = 2;
-					break;
 				case 4:
-					selectionSize = 4;
-					break;
 				case 8:
-					selectionSize = 8;
+					selectionSize = mode;
 					break;
 				default:
 					selectionSize = 1;
