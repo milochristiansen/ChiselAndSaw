@@ -5,4 +5,13 @@
 	"chiselandsaw:block-metal": "Chiseled Metal",
 	"chiselandsaw:block-stone": "Chiseled Stone",
 	"chiselandsaw:block-wood": "Chiseled Wood",
+
+	"chiselandsaw:item-chisel-gold": "Gold chisel",
+	"chiselandsaw:item-chisel-silver": "Silver chisel",
+	"chiselandsaw:item-chisel-copper": "Copper chisel",
+	"chiselandsaw:item-chisel-tinbronze": "Tin bronze chisel",
+	"chiselandsaw:item-chisel-bismuthbronze": "Bismuth bronze chisel",
+	"chiselandsaw:item-chisel-blackbronze": "Black bronze chisel",
+	"chiselandsaw:item-chisel-iron": "Iron chisel",
+	"chiselandsaw:item-chisel-steel": "Steel chisel",
 }

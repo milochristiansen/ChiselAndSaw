@@ -3,6 +3,6 @@
   "name": "Chisel & Saw",
   "description" : "Microblocks!",
   "author": "Tyron Madlener & Milo Christiansen",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "gameversions": [ "1.5.2.3+" ],
 }
