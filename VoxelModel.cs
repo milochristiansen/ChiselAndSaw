@@ -145,6 +145,22 @@ namespace ChiselAndSaw {
 			voxels = nvoxels;
 		}
 
+		// Flips the voxels vertically.
+		public void VerticalFlip() {
+			inventorymesh = null;
+			blockmesh = null;
+
+			var nvoxels = new VoxelArray(false);
+			for (int y = 0; y < 16; y++) {
+				for (int x = 0; x < 16; x++) {
+					for (int z = 0; z < 16; z++) {
+						nvoxels.Set(x, y, z, voxels.Get(x, 16 - y - 1, z));
+					}
+				}
+			}
+			voxels = nvoxels;
+		}
+
 		// Serialize stores all the information required to recreate this model into a tree attribute.
 		public void Serialize(ITreeAttribute tree) {
 			tree.SetInt("voxelmodel-id", SrcBlock.BlockId);

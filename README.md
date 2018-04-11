@@ -15,5 +15,7 @@ TODO:
 * Chisel item does not fit on tool racks properly.
 * Fix the inventory item transparency issues.
 * Inlays. At least gems and precious metals, but possibly any ol' thing.
+* Semi-transparent blocks.
+* Better "can chisel" logic.
 * Apply AO (requires new engine feature).
 * Fix the block breaking decals (requires new engine feature).

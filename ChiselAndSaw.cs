@@ -35,6 +35,16 @@ namespace ChiselAndSaw {
 				if (byEntity is IEntityPlayer) {
 					byPlayer = byEntity.World.PlayerByUid(((IEntityPlayer)byEntity).PlayerUID);
 				}
+
+				if (byPlayer.Entity.Controls.Sprint) {
+					var b = byEntity.World.BlockAccessor.GetBlockEntity(blockSel.Position) as BlockEntityChisel;
+					if (b == null) {
+						return false;
+					}
+					b.VerticalFlip();
+					return true;
+				}
+
 				if (byPlayer.WorldData.CurrentGameMode != EnumGameMode.Creative) {
 					DamageItem(byEntity.World, byEntity, slot);
 				}
@@ -314,6 +324,12 @@ namespace ChiselAndSaw {
 
 		public void Rotate(bool right) {
 			Model.Rotate(right);
+			RegenSelectionBoxes();
+			MarkDirty(true);
+		}
+
+		public void VerticalFlip() {
+			Model.VerticalFlip();
 			RegenSelectionBoxes();
 			MarkDirty(true);
 		}
